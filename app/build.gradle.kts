@@ -3,13 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.finai.app"
-    compileSdk {
-        version = release(37)
-    }
+    namespace = "emilio.tolosa.finai"
+    compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.finai.app"
+        applicationId = "emilio.tolosa.finai"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
