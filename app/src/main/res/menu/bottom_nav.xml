@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_inicio"
+        android:icon="@drawable/ic_home"
+        android:title="Inicio" />
+
+    <item
+        android:id="@+id/nav_movimientos"
+        android:icon="@drawable/ic_swap"
+        android:title="Movimientos" />
+
+    <item
+        android:id="@+id/nav_presupuesto"
+        android:icon="@drawable/ic_pie"
+        android:title="Presupuesto" />
+
+    <item
+        android:id="@+id/nav_metas"
+        android:icon="@drawable/ic_target"
+        android:title="Metas" />
+
+    <item
+        android:id="@+id/nav_perfil"
+        android:icon="@drawable/ic_person"
+        android:title="Perfil" />
+
+</menu>

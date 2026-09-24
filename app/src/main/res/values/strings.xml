@@ -1,3 +1,41 @@
 <resources>
+
     <string name="app_name">FinAI</string>
+
+    <!-- Login -->
+    <string name="login_title">Iniciar sesión</string>
+    <string name="login_subtitle">Ingresa a tu cuenta de FinAI</string>
+
+    <string name="hint_email">Correo electrónico</string>
+    <string name="hint_password">Contraseña</string>
+
+    <string name="btn_login">Iniciar sesión</string>
+
+    <string name="no_account">¿No tienes una cuenta?</string>
+    <string name="register_here">Regístrate aquí</string>
+
+    <!-- Mensajes -->
+    <string name="error_empty_fields">Completa los campos</string>
+    <string name="error_invalid_credentials">Credenciales incorrectas</string>
+
+    <!-- Registro -->
+    <string name="register_title">Crear cuenta</string>
+    <string name="register_subtitle">Regístrate en FinAI</string>
+
+    <string name="hint_name">Nombre</string>
+
+    <string name="btn_register">Registrarme</string>
+
+    <string name="already_account">¿Ya tienes una cuenta?</string>
+    <string name="login_here">Inicia sesión aquí</string>
+
+    <string name="error_register_data">
+    Revisa los datos (contraseña mínimo 6)
+</string>
+
+    <string name="coming_soon">Próximamente</string>
+
+    <string name="btn_google">Continuar con Google</string>
+    <string name="btn_github">Continuar con GitHub</string>
+
 </resources>

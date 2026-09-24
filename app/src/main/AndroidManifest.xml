@@ -16,16 +16,28 @@
         android:theme="@style/Theme.FinAI">
 
         <activity
-            android:name="emilio.tolosa.finai.HomeActivity"
+            android:name="emilio.tolosa.finai.MainActivity"
             android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
-        <activity android:name="emilio.tolosa.finai.LoginActivity" android:exported="false" />
-        <activity android:name="emilio.tolosa.finai.RegisterActivity" android:exported="false" />
+        <activity
+            android:name="emilio.tolosa.finai.HomeActivity"
+            android:exported="false" />
+
+        <activity
+            android:name="emilio.tolosa.finai.LoginActivity"
+            android:exported="false" />
+
+        <activity
+            android:name="emilio.tolosa.finai.RegisterActivity"
+            android:exported="false" />
+
         <activity android:name="emilio.tolosa.finai.AIAssistantActivity" android:exported="false" />
         <activity android:name="emilio.tolosa.finai.CameraActivity" android:exported="false" />
         <activity android:name="emilio.tolosa.finai.SensorsActivity" android:exported="false" />

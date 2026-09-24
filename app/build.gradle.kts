@@ -53,9 +53,9 @@ dependencies {
     implementation(libs.material)
 
     // Room: base de datos local
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // DataStore: preferencias/sesión
     implementation("androidx.datastore:datastore-preferences:1.1.1")
