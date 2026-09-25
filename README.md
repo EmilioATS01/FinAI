@@ -95,6 +95,193 @@ emilio.tolosa.finai
 4. Cuando todo funcione, borra `MovimientosActivity`, `MetasActivity`, `PerfilActivity` y sus layouts viejos (y su declaración en el Manifest).
 5. `MainActivity` puede quedarse como pantalla de arranque que decide si ir a Login o Home (ver sección 5).
 
+### 1.1 Checklist: qué ya tienes vs. qué falta crear
+
+Comparando tu proyecto actual con lo que pide la guía, esto es exactamente lo que **no existe todavía** y hay que crear desde cero.
+
+**✅ Ya existe (no lo toques todavía, se usa tal cual):**
+```
+data/DataStoreManager.kt
+data/Movimiento.kt
+data/MovimientoDao.kt
+data/MovimientoDatabase.kt
+viewmodel/FinanzasViewModel.kt   (hay que AMPLIARLO, no crearlo — ver sección 7 y 12)
+MainActivity.kt / activity_main.xml
+LoginActivity.kt / activity_login.xml
+RegisterActivity.kt / activity_register.xml
+HomeActivity.kt / activity_home.xml   (hay que MODIFICARLO — ver sección 6)
+AIAssistantActivity.kt / activity_ai_assistant.xml   (hay que completar el código — sección 12.3)
+CameraActivity.kt / activity_camera.xml               (hay que completar el código — sección 13.1)
+SensorsActivity.kt / activity_sensors.xml
+```
+
+**🗑️ Existen pero se van a convertir en Fragments y luego se borran (ver sección 1, pasos 2-4):**
+```
+MovimientosActivity.kt → nace MovimientosFragment.kt
+MetasActivity.kt        → nace MetasFragment.kt
+PerfilActivity.kt       → nace PerfilFragment.kt
+activity_movimientos.xml → nace fragment_movimientos.xml
+activity_metas.xml       → nace fragment_metas.xml
+activity_perfil.xml      → nace fragment_perfil.xml
+```
+
+**🆕 Carpetas nuevas que debes crear (clic derecho en `emilio.tolosa.finai` → New → Package):**
+```
+network/
+ui/
+```
+
+**🆕 Archivos Kotlin nuevos (dentro de `network/`):**
+```
+network/ApiClient.kt      → sección 12.1
+network/OpenAiApi.kt      → sección 12.3 (interfaz OpenAiApi + ChatMessage/ChatRequest/ChatResponse/Choice)
+network/ExchangeApi.kt    → sección 12.2 (interfaz ExchangeApi + ExchangeResponse)
+network/BelvoApi.kt       → sección 12.4 (interfaz BelvoApi + sus data class)
+```
+> Puedes poner cada interfaz y sus `data class` en el mismo archivo, como está en la guía; no es obligatorio separarlas en más archivos.
+
+**🆕 Archivos Kotlin nuevos (dentro de `ui/`) — esto es lo que te falta para el Paso 8:**
+```
+ui/HomeFragment.kt            → sección 8.3  (NO EXISTE, hay que crearlo)
+ui/MovimientosFragment.kt     → sección 9.1
+ui/PresupuestoFragment.kt     → sección 10.3
+ui/MetasFragment.kt           → sección 11.1
+ui/PerfilFragment.kt          → sección 11.2
+ui/MovimientoAdapter.kt       → sección 8.2
+ui/PresupuestoAdapter.kt      → sección 10.2
+ui/NuevoMovimientoDialog.kt   → sección 9.2
+```
+
+**🆕 Archivo Kotlin nuevo (raíz del paquete):**
+```
+Utils.kt   → sección 5.1 (funciones sha256() y mx())
+```
+
+**🆕 Layouts XML nuevos (dentro de `res/layout/`):**
+```
+fragment_home.xml            → ver el ejemplo completo abajo (1.2)
+fragment_movimientos.xml     → copiado/adaptado de activity_movimientos.xml
+fragment_presupuesto.xml     → nuevo, según tu diseño de "Mi presupuesto"
+fragment_metas.xml           → copiado/adaptado de activity_metas.xml
+fragment_perfil.xml          → copiado/adaptado de activity_perfil.xml
+item_movimiento.xml          → fila de la lista de movimientos (ver ejemplo abajo)
+item_presupuesto.xml         → fila de categoría con barra de progreso
+item_meta.xml                → fila de una meta con barra de progreso
+dialog_movimiento.xml        → formulario del diálogo "Nuevo movimiento"
+```
+
+**🆕 Otros recursos nuevos:**
+```
+res/menu/bottom_nav.xml       → sección 6.1
+local.properties (llaves)     → sección 2.2 (si no existe ya, créalo en la raíz del proyecto)
+Vector Assets (íconos): ic_home, ic_swap, ic_pie, ic_target, ic_person, ic_sparkle
+```
+
+### 1.2 Cómo crear un Fragment en Android Studio (paso a paso)
+
+Como no tienes ninguno todavía, aquí el procedimiento exacto:
+
+1. En el árbol de archivos, clic derecho sobre el paquete `emilio.tolosa.finai` → **New → Package** → escribe `ui` y Enter.
+2. Clic derecho sobre el paquete `ui` recién creado → **New → Fragment → Fragment (Blank)**.
+3. En el diálogo: escribe el nombre (`HomeFragment`), deja marcado **"Create layout file"**, y en "Fragment Layout Name" pon `fragment_home`. Clic en **Finish**.
+4. Android Studio genera `ui/HomeFragment.kt` con código de plantilla (usa `newInstance()` y `ARG_PARAM1` de ejemplo) y `res/layout/fragment_home.xml` vacío. **Borra ese código de plantilla** y reemplázalo por el de la sección 8.3 de esta guía.
+5. Repite los pasos 2-4 para `MovimientosFragment`, `PresupuestoFragment`, `MetasFragment` y `PerfilFragment`, usando los nombres de layout `fragment_movimientos`, `fragment_presupuesto`, `fragment_metas`, `fragment_perfil`.
+
+> Alternativa más rápida: **New → Fragment → Fragment (Blank)** a veces no aparece directo; si no lo ves, ve a **New → Fragment** y ahí elige "Blank" en la lista. También puedes crear el archivo `.kt` a mano (New → Kotlin Class/File) y el `.xml` a mano (New → XML → Layout Resource File) — el resultado final es el mismo, solo cambia el atajo.
+
+### 1.3 Ejemplo de `fragment_home.xml`
+
+Este layout no existía; aquí tienes una versión funcional con los IDs que usa `HomeFragment.kt` (sección 8.3). Ajusta colores y márgenes a tu diseño real, la estructura es lo importante:
+
+```xml
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/bg">
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="16dp">
+
+        <!-- Tarjeta azul de balance -->
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="20dp"
+            android:background="@drawable/bg_card">
+            <TextView android:text="Balance disponible" android:textColor="#FFFFFF"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <TextView android:id="@+id/tvBalance" android:textSize="28sp" android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <TextView android:id="@+id/tvBalanceUsd" android:textColor="#E0E0FF"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <!-- Ingresos / Gastos -->
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginTop="12dp">
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:background="@drawable/bg_card"
+                android:orientation="vertical" android:padding="16dp" android:layout_marginEnd="8dp">
+                <TextView android:text="Ingresos" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/tvIngresos" android:textStyle="bold" android:textColor="@color/income"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:background="@drawable/bg_card"
+                android:orientation="vertical" android:padding="16dp">
+                <TextView android:text="Gastos" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                <TextView android:id="@+id/tvGastos" android:textStyle="bold" android:textColor="@color/expense"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Ahorro del mes (opcional, usa una meta destacada) -->
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progressAhorro"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:trackCornerRadius="8dp"/>
+
+        <!-- Últimos movimientos -->
+        <TextView android:text="Últimos movimientos" android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvUltimos"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"
+            android:layout_marginTop="8dp"/>
+    </LinearLayout>
+</ScrollView>
+```
+
+### 1.4 Ejemplo de `item_movimiento.xml`
+
+Fila de la lista, con los IDs que usa `MovimientoAdapter.kt` (sección 8.2):
+
+```xml
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="horizontal" android:padding="12dp"
+    android:background="@drawable/bg_card" android:layout_marginBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="0dp" android:layout_weight="1"
+        android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView android:id="@+id/tvTitulo" android:textStyle="bold"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <TextView android:id="@+id/tvDetalle" android:textColor="@color/text_secondary" android:textSize="12sp"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <TextView android:id="@+id/tvMonto" android:textStyle="bold"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"/>
+</LinearLayout>
+```
+
+> Layouts parecidos necesitarás para `item_presupuesto.xml` (agrega un `LinearProgressIndicator` con IDs `tvCategoria`, `tvLimite`, `progressBar`, `tvUso`, `tvRestan` — sección 10.2) y `item_meta.xml` (IDs `tvNombre`, `tvPorcentaje`, `progressMeta`, `tvAhorrado`, `tvObjetivo`, `btnAbonar` — sección 11.1). Sigue el mismo patrón: una tarjeta (`bg_card`) con `TextView`s y una barra de progreso.
+
 ---
 
 ## 2. Dependencias y permisos
