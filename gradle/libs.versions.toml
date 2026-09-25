@@ -8,6 +8,7 @@ appcompat = "1.8.0"
 material = "1.14.0"
 ksp = "2.0.21-1.0.27"
 room = "2.8.5"
+kotlin = "2.0.21"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -23,3 +24,4 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

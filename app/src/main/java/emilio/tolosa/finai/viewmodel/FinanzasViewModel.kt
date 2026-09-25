@@ -1,20 +1,13 @@
 package emilio.tolosa.finai.viewmodel
 
 import android.app.Application
-import androidx.datastore.preferences.protobuf.LazyStringArrayList.emptyList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import emilio.tolosa.finai.data.DataStoreManager
-import emilio.tolosa.finai.data.Meta
-import emilio.tolosa.finai.data.Movimiento
-import emilio.tolosa.finai.data.MovimientoDatabase
-import emilio.tolosa.finai.data.Presupuesto
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import emilio.tolosa.finai.BuildConfig
+import emilio.tolosa.finai.data.*
+import emilio.tolosa.finai.network.*
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlin.collections.emptyList
 
 class PresupuestoUi(val categoria: String, val limite: Double, val gastado: Double) {
     val restante get() = limite - gastado
@@ -29,7 +22,6 @@ class FinanzasViewModel(app: Application) : AndroidViewModel(app) {
     private fun <T> Flow<T>.estado(inicial: T) =
         stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), inicial)
 
-    // ---- Datos de Room ----
     val movimientos = dao.todos().estado(emptyList())
     val ultimos = dao.ultimos(5).estado(emptyList())
     val ingresos = dao.totalIngresos().estado(0.0)
@@ -37,14 +29,15 @@ class FinanzasViewModel(app: Application) : AndroidViewModel(app) {
     val balance = combine(ingresos, gastos) { i, g -> i - g }.estado(0.0)
     val metas = dao.metas().estado(emptyList())
 
-    // Presupuesto por categoría: une límite (tabla presupuestos) con gasto real
     val presupuestos = combine(dao.presupuestos(), dao.gastosPorCategoria()) { pres, gastos ->
         pres.map { p ->
             PresupuestoUi(p.categoria, p.limite, gastos.find { it.categoria == p.categoria }?.total ?: 0.0)
         }
     }.estado(emptyList())
 
-    // ---- Acciones ----
+    private val _tasas = MutableStateFlow<Map<String, Double>>(emptyMap())
+    val tasas: StateFlow<Map<String, Double>> = _tasas
+
     fun agregarMovimiento(m: Movimiento) = viewModelScope.launch { dao.insertar(m) }
     fun borrarMovimiento(m: Movimiento) = viewModelScope.launch { dao.borrar(m) }
     fun agregarMeta(nombre: String, objetivo: Double) =
@@ -54,7 +47,55 @@ class FinanzasViewModel(app: Application) : AndroidViewModel(app) {
     fun guardarPresupuesto(cat: String, limite: Double) =
         viewModelScope.launch { dao.guardarPresupuesto(Presupuesto(cat, limite)) }
 
-    // Datos de ejemplo la primera vez (útil para que se vea como tu diseño)
+    fun cargarTasas(base: String) = viewModelScope.launch {
+        try {
+            val r = ApiClient.exchange.latest(BuildConfig.EXCHANGE_KEY, base)
+            if (r.result == "success") _tasas.value = r.conversion_rates
+        } catch (_: Exception) { }
+    }
+
+    fun resumenParaIa(): String {
+        val movs = movimientos.value.take(15).joinToString("\n") {
+            "- ${it.titulo} (${it.categoria}): ${if (it.esIngreso) "+" else "-"}${it.monto}"
+        }
+        val pres = presupuestos.value.joinToString("\n") {
+            "- ${it.categoria}: límite ${it.limite}, gastado ${it.gastado}"
+        }
+        return """
+            Balance: ${balance.value}. Ingresos: ${ingresos.value}. Gastos: ${gastos.value}.
+            Últimos movimientos:
+            $movs
+            Presupuestos:
+            $pres
+        """.trimIndent()
+    }
+
+    fun importarDeBelvo(onResultado: (String) -> Unit) = viewModelScope.launch {
+        try {
+            val link = ApiClient.belvo.crearLink(
+                LinkRequest(institution = "INSTITUCION_SANDBOX", username = "USUARIO_PRUEBA", password = "PASS_PRUEBA")
+            )
+            val txs = ApiClient.belvo.transacciones(
+                TxRequest(link.id, date_from = "2026-08-01", date_to = "2026-09-23")
+            )
+            txs.forEach { t ->
+                dao.insertar(
+                    Movimiento(
+                        titulo = t.description ?: "Movimiento bancario",
+                        categoria = t.category ?: "Otros",
+                        monto = kotlin.math.abs(t.amount),
+                        esIngreso = t.type == "INFLOW",
+                        origen = "belvo",
+                        externalId = t.id
+                    )
+                )
+            }
+            onResultado("Se importaron ${txs.size} movimientos")
+        } catch (e: Exception) {
+            onResultado("Error con Belvo: ${e.message}")
+        }
+    }
+
     fun sembrarDatosDemo() = viewModelScope.launch {
         if (movimientos.value.isEmpty()) {
             dao.insertar(Movimiento(titulo = "Nómina", categoria = "Ingreso", monto = 25000.0, esIngreso = true))

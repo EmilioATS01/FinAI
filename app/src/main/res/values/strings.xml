@@ -37,5 +37,7 @@
 
     <string name="btn_google">Continuar con Google</string>
     <string name="btn_github">Continuar con GitHub</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 
 </resources>
