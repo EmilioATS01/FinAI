@@ -1,303 +1,23 @@
-# 💸 FINAI — Guía paso a paso (Android Studio + Kotlin)
+# 💸 FINAI — README (guía rápida, paso a paso)
 
-App de finanzas personales con **Activities + Fragments**, **sin backend**, usando **OpenAI**, **Belvo** y **ExchangeRate**.
+Ya tienes creados: `data/`, `network/` (interfaces vacías), `ui/` (fragments con su xml), `viewmodel/FinanzasViewModel.kt` y todas las Activities. Esta guía te da, **en orden**, el código exacto que va en cada archivo para que todo funcione.
 
-> Paquete del proyecto: `emilio.tolosa.finai`
-> Nota: las versiones de librerías cambian seguido. Usa las que Android Studio te sugiera si alguna ya está desactualizada.
-
----
-
-## 0. Visión general
-
-### ¿Qué vamos a construir?
-
-Según tus diseños:
-
-| Pantalla | Qué hace | Tipo |
-|---|---|---|
-| Login / Registro | Iniciar sesión y crear cuenta (local) | Activity |
-| Inicio | Balance, ingresos, gastos, ahorro y últimos movimientos | Fragment |
-| Movimientos | Lista de ingresos/egresos + botón "Nuevo movimiento" | Fragment |
-| Presupuesto | Presupuesto mensual y barras por categoría | Fragment |
-| Metas | Metas de ahorro con porcentaje | Fragment |
-| Perfil | Datos del usuario, moneda, cerrar sesión | Fragment |
-| Asistente IA | Chat con OpenAI que conoce tus finanzas | Activity |
-| Cámara | Foto de un ticket → la IA extrae el gasto | Activity |
-| Sensores | Agitar el celular para agregar movimiento | Activity |
-
-### Arquitectura (simple, ideal para un proyecto escolar)
-
-```
-┌──────────────────────────────────────────────┐
-│  UI: Activities + Fragments (XML + ViewBinding)│
-└───────────────┬──────────────────────────────┘
-                │ observa (StateFlow)
-┌───────────────▼──────────────┐
-│ FinanzasViewModel            │  ← lógica y cálculos
-└───────┬──────────────┬───────┘
-        │              │
-┌───────▼──────┐  ┌────▼────────────────────────┐
-│ Room (SQLite)│  │ APIs con Retrofit            │
-│ + DataStore  │  │ OpenAI · Belvo · ExchangeRate│
-└──────────────┘  └──────────────────────────────┘
-```
-
-### ¿Por qué esta estructura?
-
-- **Room**: base de datos local. Como no hay backend, aquí viven tus movimientos, metas y presupuestos.
-- **DataStore**: guarda datos pequeños (sesión iniciada, nombre, moneda). Reemplaza a SharedPreferences.
-- **ViewModel**: guarda el estado de la pantalla y sobrevive a rotaciones. Los fragments comparten **un solo** ViewModel.
-- **Retrofit**: librería para llamar APIs REST de forma sencilla.
-- **Fragments**: cada pestaña de la barra inferior es un Fragment dentro de **una sola** Activity (`HomeActivity`). Así no se recrea toda la pantalla al cambiar de pestaña.
+> Ve tachando cada paso conforme lo termines. No saltes pasos: cada uno depende del anterior.
 
 ---
 
-## 1. Reorganizar el proyecto
+## Paso 1 — `build.gradle.kts` (módulo `app`)
 
-Hoy tienes `MovimientosActivity`, `MetasActivity` y `PerfilActivity` como Activities. Según tu diseño, todas comparten la barra inferior, así que conviene que sean **Fragments**.
-
-### Estructura objetivo
-
-```
-emilio.tolosa.finai
-├── data/
-│   ├── DataStoreManager.kt
-│   ├── Movimiento.kt          (Movimiento, Meta, Presupuesto)
-│   ├── MovimientoDao.kt
-│   └── MovimientoDatabase.kt
-├── network/                   ← NUEVO
-│   ├── ApiClient.kt
-│   ├── OpenAiApi.kt
-│   ├── BelvoApi.kt
-│   └── ExchangeApi.kt
-├── ui/                        ← NUEVO
-│   ├── HomeFragment.kt
-│   ├── MovimientosFragment.kt
-│   ├── PresupuestoFragment.kt
-│   ├── MetasFragment.kt
-│   ├── PerfilFragment.kt
-│   ├── MovimientoAdapter.kt
-│   └── NuevoMovimientoDialog.kt
-├── viewmodel/FinanzasViewModel.kt
-├── LoginActivity.kt
-├── RegisterActivity.kt
-├── HomeActivity.kt            ← contenedor de fragments + barra inferior
-├── AIAssistantActivity.kt
-├── CameraActivity.kt
-└── SensorsActivity.kt
-```
-
-### Pasos
-
-1. Crea los paquetes `network` y `ui` (clic derecho en el paquete → New → Package).
-2. Crea los Fragments con: clic derecho → New → Fragment → Fragment (Blank).
-3. Copia el contenido de `activity_movimientos.xml`, `activity_metas.xml`, `activity_perfil.xml` a `fragment_movimientos.xml`, `fragment_metas.xml`, `fragment_perfil.xml` (quita la barra inferior de esos layouts: ahora vive en `activity_home.xml`).
-4. Cuando todo funcione, borra `MovimientosActivity`, `MetasActivity`, `PerfilActivity` y sus layouts viejos (y su declaración en el Manifest).
-5. `MainActivity` puede quedarse como pantalla de arranque que decide si ir a Login o Home (ver sección 5).
-
-### 1.1 Checklist: qué ya tienes vs. qué falta crear
-
-Comparando tu proyecto actual con lo que pide la guía, esto es exactamente lo que **no existe todavía** y hay que crear desde cero.
-
-**✅ Ya existe (no lo toques todavía, se usa tal cual):**
-```
-data/DataStoreManager.kt
-data/Movimiento.kt
-data/MovimientoDao.kt
-data/MovimientoDatabase.kt
-viewmodel/FinanzasViewModel.kt   (hay que AMPLIARLO, no crearlo — ver sección 7 y 12)
-MainActivity.kt / activity_main.xml
-LoginActivity.kt / activity_login.xml
-RegisterActivity.kt / activity_register.xml
-HomeActivity.kt / activity_home.xml   (hay que MODIFICARLO — ver sección 6)
-AIAssistantActivity.kt / activity_ai_assistant.xml   (hay que completar el código — sección 12.3)
-CameraActivity.kt / activity_camera.xml               (hay que completar el código — sección 13.1)
-SensorsActivity.kt / activity_sensors.xml
-```
-
-**🗑️ Existen pero se van a convertir en Fragments y luego se borran (ver sección 1, pasos 2-4):**
-```
-MovimientosActivity.kt → nace MovimientosFragment.kt
-MetasActivity.kt        → nace MetasFragment.kt
-PerfilActivity.kt       → nace PerfilFragment.kt
-activity_movimientos.xml → nace fragment_movimientos.xml
-activity_metas.xml       → nace fragment_metas.xml
-activity_perfil.xml      → nace fragment_perfil.xml
-```
-
-**🆕 Carpetas nuevas que debes crear (clic derecho en `emilio.tolosa.finai` → New → Package):**
-```
-network/
-ui/
-```
-
-**🆕 Archivos Kotlin nuevos (dentro de `network/`):**
-```
-network/ApiClient.kt      → sección 12.1
-network/OpenAiApi.kt      → sección 12.3 (interfaz OpenAiApi + ChatMessage/ChatRequest/ChatResponse/Choice)
-network/ExchangeApi.kt    → sección 12.2 (interfaz ExchangeApi + ExchangeResponse)
-network/BelvoApi.kt       → sección 12.4 (interfaz BelvoApi + sus data class)
-```
-> Puedes poner cada interfaz y sus `data class` en el mismo archivo, como está en la guía; no es obligatorio separarlas en más archivos.
-
-**🆕 Archivos Kotlin nuevos (dentro de `ui/`) — esto es lo que te falta para el Paso 8:**
-```
-ui/HomeFragment.kt            → sección 8.3  (NO EXISTE, hay que crearlo)
-ui/MovimientosFragment.kt     → sección 9.1
-ui/PresupuestoFragment.kt     → sección 10.3
-ui/MetasFragment.kt           → sección 11.1
-ui/PerfilFragment.kt          → sección 11.2
-ui/MovimientoAdapter.kt       → sección 8.2
-ui/PresupuestoAdapter.kt      → sección 10.2
-ui/NuevoMovimientoDialog.kt   → sección 9.2
-```
-
-**🆕 Archivo Kotlin nuevo (raíz del paquete):**
-```
-Utils.kt   → sección 5.1 (funciones sha256() y mx())
-```
-
-**🆕 Layouts XML nuevos (dentro de `res/layout/`):**
-```
-fragment_home.xml            → ver el ejemplo completo abajo (1.2)
-fragment_movimientos.xml     → copiado/adaptado de activity_movimientos.xml
-fragment_presupuesto.xml     → nuevo, según tu diseño de "Mi presupuesto"
-fragment_metas.xml           → copiado/adaptado de activity_metas.xml
-fragment_perfil.xml          → copiado/adaptado de activity_perfil.xml
-item_movimiento.xml          → fila de la lista de movimientos (ver ejemplo abajo)
-item_presupuesto.xml         → fila de categoría con barra de progreso
-item_meta.xml                → fila de una meta con barra de progreso
-dialog_movimiento.xml        → formulario del diálogo "Nuevo movimiento"
-```
-
-**🆕 Otros recursos nuevos:**
-```
-res/menu/bottom_nav.xml       → sección 6.1
-local.properties (llaves)     → sección 2.2 (si no existe ya, créalo en la raíz del proyecto)
-Vector Assets (íconos): ic_home, ic_swap, ic_pie, ic_target, ic_person, ic_sparkle
-```
-
-### 1.2 Cómo crear un Fragment en Android Studio (paso a paso)
-
-Como no tienes ninguno todavía, aquí el procedimiento exacto:
-
-1. En el árbol de archivos, clic derecho sobre el paquete `emilio.tolosa.finai` → **New → Package** → escribe `ui` y Enter.
-2. Clic derecho sobre el paquete `ui` recién creado → **New → Fragment → Fragment (Blank)**.
-3. En el diálogo: escribe el nombre (`HomeFragment`), deja marcado **"Create layout file"**, y en "Fragment Layout Name" pon `fragment_home`. Clic en **Finish**.
-4. Android Studio genera `ui/HomeFragment.kt` con código de plantilla (usa `newInstance()` y `ARG_PARAM1` de ejemplo) y `res/layout/fragment_home.xml` vacío. **Borra ese código de plantilla** y reemplázalo por el de la sección 8.3 de esta guía.
-5. Repite los pasos 2-4 para `MovimientosFragment`, `PresupuestoFragment`, `MetasFragment` y `PerfilFragment`, usando los nombres de layout `fragment_movimientos`, `fragment_presupuesto`, `fragment_metas`, `fragment_perfil`.
-
-> Alternativa más rápida: **New → Fragment → Fragment (Blank)** a veces no aparece directo; si no lo ves, ve a **New → Fragment** y ahí elige "Blank" en la lista. También puedes crear el archivo `.kt` a mano (New → Kotlin Class/File) y el `.xml` a mano (New → XML → Layout Resource File) — el resultado final es el mismo, solo cambia el atajo.
-
-### 1.3 Ejemplo de `fragment_home.xml`
-
-Este layout no existía; aquí tienes una versión funcional con los IDs que usa `HomeFragment.kt` (sección 8.3). Ajusta colores y márgenes a tu diseño real, la estructura es lo importante:
-
-```xml
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@color/bg">
-    <LinearLayout
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="16dp">
-
-        <!-- Tarjeta azul de balance -->
-        <LinearLayout
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="20dp"
-            android:background="@drawable/bg_card">
-            <TextView android:text="Balance disponible" android:textColor="#FFFFFF"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/tvBalance" android:textSize="28sp" android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/tvBalanceUsd" android:textColor="#E0E0FF"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <!-- Ingresos / Gastos -->
-        <LinearLayout
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal" android:layout_marginTop="12dp">
-            <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:background="@drawable/bg_card"
-                android:orientation="vertical" android:padding="16dp" android:layout_marginEnd="8dp">
-                <TextView android:text="Ingresos" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/tvIngresos" android:textStyle="bold" android:textColor="@color/income"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            </LinearLayout>
-            <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:background="@drawable/bg_card"
-                android:orientation="vertical" android:padding="16dp">
-                <TextView android:text="Gastos" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/tvGastos" android:textStyle="bold" android:textColor="@color/expense"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Ahorro del mes (opcional, usa una meta destacada) -->
-        <com.google.android.material.progressindicator.LinearProgressIndicator
-            android:id="@+id/progressAhorro"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:trackCornerRadius="8dp"/>
-
-        <!-- Últimos movimientos -->
-        <TextView android:text="Últimos movimientos" android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvUltimos"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false"
-            android:layout_marginTop="8dp"/>
-    </LinearLayout>
-</ScrollView>
-```
-
-### 1.4 Ejemplo de `item_movimiento.xml`
-
-Fila de la lista, con los IDs que usa `MovimientoAdapter.kt` (sección 8.2):
-
-```xml
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:orientation="horizontal" android:padding="12dp"
-    android:background="@drawable/bg_card" android:layout_marginBottom="8dp">
-
-    <LinearLayout
-        android:layout_width="0dp" android:layout_weight="1"
-        android:layout_height="wrap_content" android:orientation="vertical">
-        <TextView android:id="@+id/tvTitulo" android:textStyle="bold"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <TextView android:id="@+id/tvDetalle" android:textColor="@color/text_secondary" android:textSize="12sp"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-    </LinearLayout>
-
-    <TextView android:id="@+id/tvMonto" android:textStyle="bold"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"/>
-</LinearLayout>
-```
-
-> Layouts parecidos necesitarás para `item_presupuesto.xml` (agrega un `LinearProgressIndicator` con IDs `tvCategoria`, `tvLimite`, `progressBar`, `tvUso`, `tvRestan` — sección 10.2) y `item_meta.xml` (IDs `tvNombre`, `tvPorcentaje`, `progressMeta`, `tvAhorrado`, `tvObjetivo`, `btnAbonar` — sección 11.1). Sigue el mismo patrón: una tarjeta (`bg_card`) con `TextView`s y una barra de progreso.
-
----
-
-## 2. Dependencias y permisos
-
-### 2.1 `app/build.gradle.kts`
+Abre `app/build.gradle.kts` y asegúrate de tener esto:
 
 ```kotlin
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    // KSP: procesa las anotaciones de Room. La versión debe coincidir con tu versión de Kotlin
-    id("com.google.devtools.ksp") version "TU_VERSION_KSP"
+    id("com.google.devtools.ksp") version "2.0.21-1.0.28" // ajusta si Android Studio te pide otra versión
 }
 
 import java.util.Properties
-
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) load(f.inputStream())
@@ -305,45 +25,39 @@ val localProps = Properties().apply {
 
 android {
     defaultConfig {
-        // Las llaves NO van escritas en el código. Se leen de local.properties
         buildConfigField("String", "OPENAI_KEY", "\"${localProps["OPENAI_KEY"] ?: ""}\"")
         buildConfigField("String", "EXCHANGE_KEY", "\"${localProps["EXCHANGE_KEY"] ?: ""}\"")
         buildConfigField("String", "BELVO_ID", "\"${localProps["BELVO_ID"] ?: ""}\"")
         buildConfigField("String", "BELVO_SECRET", "\"${localProps["BELVO_SECRET"] ?: ""}\"")
     }
     buildFeatures {
-        viewBinding = true   // acceder a las vistas sin findViewById
-        buildConfig = true   // permite usar BuildConfig.OPENAI_KEY
+        viewBinding = true
+        buildConfig = true
     }
 }
 
 dependencies {
-    // Room: base de datos local
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-    // DataStore: preferencias/sesión
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-
-    // ViewModel + corrutinas en el ciclo de vida
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
-
-    // UI Material (BottomNavigation, tarjetas, barras de progreso)
     implementation("com.google.android.material:material:1.12.0")
 
-    // Retrofit: llamadas HTTP a las APIs
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 }
 ```
 
-### 2.2 Llaves de las APIs → `local.properties`
+Dale clic a **"Sync Now"** arriba a la derecha cuando lo pegues.
 
-Este archivo está en la raíz del proyecto y Android Studio ya lo ignora en Git.
+## Paso 2 — `local.properties`
+
+En la raíz del proyecto (junto a `settings.gradle.kts`), crea o edita `local.properties` y agrega tus llaves:
 
 ```properties
 OPENAI_KEY=sk-xxxxxxxx
@@ -352,14 +66,11 @@ BELVO_ID=xxxxxxxx
 BELVO_SECRET=xxxxxxxx
 ```
 
-> ⚠️ **Sin backend, las llaves viajan dentro del APK** y alguien podría extraerlas. Para un proyecto escolar es aceptable si:
-> - Nunca subes `local.properties` a GitHub.
-> - En OpenAI pones un **límite de gasto** bajo (por ejemplo, 5 USD).
-> - Belvo lo usas solo en **sandbox** (datos falsos).
->
-> En un proyecto real, las llaves van en un servidor. Menciónalo en tu presentación: demuestra que entiendes la limitación.
+Nunca subas este archivo a GitHub (ya viene ignorado por defecto).
 
-### 2.3 `AndroidManifest.xml`
+## Paso 3 — `AndroidManifest.xml`
+
+Verifica que tengas esto (agrega lo que falte):
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
@@ -381,21 +92,34 @@ BELVO_SECRET=xxxxxxxx
 </application>
 ```
 
-- `INTERNET`: sin esto ninguna API funciona.
-- `CAMERA`: para tomar fotos de tickets.
+Quita cualquier `<activity>` de `MovimientosActivity`, `MetasActivity`, `PerfilActivity` si ya los borraste.
 
 ---
 
-## 3. Base de datos local (Room)
+## Paso 4 — `Utils.kt` (raíz del paquete `emilio.tolosa.finai`)
 
-### ¿Para qué sirve?
+Funciones que usarás en toda la app: hashear contraseñas y formatear dinero.
 
-Guarda tus movimientos, metas y presupuestos aunque cierres la app. Tiene 3 piezas:
-- **Entity**: una tabla (clase de Kotlin).
-- **DAO**: las consultas SQL.
-- **Database**: une todo y crea la base.
+```kotlin
+package emilio.tolosa.finai
 
-### 3.1 `Movimiento.kt` (entidades)
+import java.security.MessageDigest
+import java.text.NumberFormat
+import java.util.Locale
+
+fun String.sha256(): String =
+    MessageDigest.getInstance("SHA-256").digest(toByteArray())
+        .joinToString("") { "%02x".format(it) }
+
+fun Double.mx(): String =
+    NumberFormat.getCurrencyInstance(Locale("es", "MX")).format(this)
+```
+
+---
+
+## Paso 5 — Completar `data/Movimiento.kt`
+
+Debe tener estas 3 tablas + 1 clase auxiliar (si ya tienes `Movimiento`, agrégale los campos que falten):
 
 ```kotlin
 package emilio.tolosa.finai.data
@@ -406,38 +130,37 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "movimientos",
-    indices = [Index(value = ["externalId"], unique = true)] // evita duplicar transacciones de Belvo
+    indices = [Index(value = ["externalId"], unique = true)]
 )
 data class Movimiento(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val titulo: String,            // "Netflix"
-    val categoria: String,         // "Entretenimiento"
-    val monto: Double,             // siempre positivo
-    val esIngreso: Boolean,        // true = ingreso, false = gasto
+    val titulo: String,
+    val categoria: String,
+    val monto: Double,
+    val esIngreso: Boolean,
     val fecha: Long = System.currentTimeMillis(),
-    val origen: String = "manual", // manual | camara | belvo | sensor
-    val externalId: String? = null // id de Belvo (si viene de allá)
+    val origen: String = "manual",
+    val externalId: String? = null
 )
 
 @Entity(tableName = "metas")
 data class Meta(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val nombre: String,     // "Laptop"
-    val objetivo: Double,   // 25000
+    val nombre: String,
+    val objetivo: Double,
     val ahorrado: Double = 0.0
 )
 
 @Entity(tableName = "presupuestos")
 data class Presupuesto(
-    @PrimaryKey val categoria: String, // "Comida"
-    val limite: Double                 // 2800
+    @PrimaryKey val categoria: String,
+    val limite: Double
 )
 
-// Resultado de una consulta con SUM (no es tabla)
 data class GastoCategoria(val categoria: String, val total: Double)
 ```
 
-### 3.2 `MovimientoDao.kt`
+## Paso 6 — Completar `data/MovimientoDao.kt`
 
 ```kotlin
 package emilio.tolosa.finai.data
@@ -448,7 +171,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MovimientoDao {
 
-    // Flow = se actualiza solo cada vez que cambia la tabla
     @Query("SELECT * FROM movimientos ORDER BY fecha DESC")
     fun todos(): Flow<List<Movimiento>>
 
@@ -465,20 +187,17 @@ interface MovimientoDao {
               WHERE esIngreso = 0 GROUP BY categoria""")
     fun gastosPorCategoria(): Flow<List<GastoCategoria>>
 
-    // IGNORE: si ya existe el externalId, no lo inserta otra vez
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertar(m: Movimiento)
 
     @Delete
     suspend fun borrar(m: Movimiento)
 
-    // Metas
     @Query("SELECT * FROM metas")
     fun metas(): Flow<List<Meta>>
     @Insert suspend fun insertarMeta(m: Meta)
     @Update suspend fun actualizarMeta(m: Meta)
 
-    // Presupuestos
     @Query("SELECT * FROM presupuestos")
     fun presupuestos(): Flow<List<Presupuesto>>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -486,7 +205,7 @@ interface MovimientoDao {
 }
 ```
 
-### 3.3 `MovimientoDatabase.kt`
+## Paso 7 — Completar `data/MovimientoDatabase.kt`
 
 ```kotlin
 package emilio.tolosa.finai.data
@@ -505,32 +224,22 @@ abstract class MovimientoDatabase : RoomDatabase() {
     companion object {
         @Volatile private var INSTANCE: MovimientoDatabase? = null
 
-        // Singleton: una sola instancia en toda la app
         fun get(context: Context): MovimientoDatabase =
             INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
                     context.applicationContext,
                     MovimientoDatabase::class.java,
                     "finai.db"
-                )
-                    .fallbackToDestructiveMigration() // si cambias tablas, recrea (solo para desarrollo)
+                ).fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }
             }
     }
 }
 ```
 
-> Si ya tenías una versión anterior instalada en el emulador y cambias las tablas, **desinstala la app** o sube `version`.
+> ⚠️ Si ya habías corrido la app antes con otras tablas, **desinstala la app del emulador** antes de volver a correrla.
 
----
-
-## 4. DataStore (sesión y preferencias)
-
-### ¿Para qué sirve?
-
-Recordar quién inició sesión, su nombre y su moneda preferida sin usar una base de datos completa.
-
-### `DataStoreManager.kt`
+## Paso 8 — Completar `data/DataStoreManager.kt`
 
 ```kotlin
 package emilio.tolosa.finai.data
@@ -584,34 +293,267 @@ class DataStoreManager(private val context: Context) {
 
 ---
 
-## 5. Login y Registro
+## Paso 9 — Las 3 APIs (`network/`)
 
-### ¿Para qué sirve?
+### 9.1 `network/ExchangeApi.kt`
 
-Sin backend no hay servidor que valide usuarios. La cuenta se guarda **localmente** en el teléfono. Es una simulación válida para un proyecto escolar (dilo así en tu exposición).
+```kotlin
+package emilio.tolosa.finai.network
 
-### 5.1 Función para hashear la contraseña (nunca guardes texto plano)
+import retrofit2.http.GET
+import retrofit2.http.Path
 
-Crea `Utils.kt` en el paquete raíz:
+interface ExchangeApi {
+    @GET("v6/{key}/latest/{base}")
+    suspend fun latest(@Path("key") key: String, @Path("base") base: String): ExchangeResponse
+}
+
+data class ExchangeResponse(
+    val result: String,
+    val base_code: String,
+    val conversion_rates: Map<String, Double>
+)
+```
+
+### 9.2 `network/OpenAiApi.kt`
+
+```kotlin
+package emilio.tolosa.finai.network
+
+import retrofit2.http.Body
+import retrofit2.http.POST
+
+interface OpenAiApi {
+    @POST("v1/chat/completions")
+    suspend fun chat(@Body body: ChatRequest): ChatResponse
+}
+
+data class ChatMessage(val role: String, val content: Any)
+data class ChatRequest(val model: String = "gpt-4o-mini", val messages: List<ChatMessage>)
+data class ChatResponse(val choices: List<Choice>)
+data class Choice(val message: ChatMessage)
+```
+
+### 9.3 `network/BelvoApi.kt`
+
+```kotlin
+package emilio.tolosa.finai.network
+
+import retrofit2.http.Body
+import retrofit2.http.POST
+
+interface BelvoApi {
+    @POST("api/links/")
+    suspend fun crearLink(@Body body: LinkRequest): LinkResponse
+
+    @POST("api/transactions/")
+    suspend fun transacciones(@Body body: TxRequest): List<BelvoTx>
+}
+
+data class LinkRequest(
+    val institution: String,
+    val username: String,
+    val password: String,
+    val access_mode: String = "single"
+)
+data class LinkResponse(val id: String)
+data class TxRequest(val link: String, val date_from: String, val date_to: String)
+data class BelvoTx(
+    val id: String,
+    val amount: Double,
+    val type: String,
+    val description: String?,
+    val category: String?,
+    val value_date: String?
+)
+```
+
+> Confirma los datos de "institution/username/password" de sandbox en la documentación oficial de Belvo (developers.belvo.com) antes de probarlo; cambian con el tiempo.
+
+### 9.4 `network/ApiClient.kt`
+
+```kotlin
+package emilio.tolosa.finai.network
+
+import emilio.tolosa.finai.BuildConfig
+import okhttp3.*
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
+
+object ApiClient {
+
+    private val log = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
+
+    private fun http(vararg extra: Interceptor) = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .apply { extra.forEach { addInterceptor(it) } }
+        .addInterceptor(log)
+        .build()
+
+    private fun retrofit(base: String, client: OkHttpClient) = Retrofit.Builder()
+        .baseUrl(base)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    val exchange: ExchangeApi by lazy {
+        retrofit("https://v6.exchangerate-api.com/", http()).create(ExchangeApi::class.java)
+    }
+
+    val openai: OpenAiApi by lazy {
+        val auth = Interceptor { chain ->
+            chain.proceed(chain.request().newBuilder()
+                .header("Authorization", "Bearer ${BuildConfig.OPENAI_KEY}").build())
+        }
+        retrofit("https://api.openai.com/", http(auth)).create(OpenAiApi::class.java)
+    }
+
+    val belvo: BelvoApi by lazy {
+        val cred = Credentials.basic(BuildConfig.BELVO_ID, BuildConfig.BELVO_SECRET)
+        val auth = Interceptor { chain ->
+            chain.proceed(chain.request().newBuilder().header("Authorization", cred).build())
+        }
+        retrofit("https://sandbox.belvo.com/", http(auth)).create(BelvoApi::class.java)
+    }
+}
+```
+
+---
+
+## Paso 10 — `viewmodel/FinanzasViewModel.kt` (completo)
+
+```kotlin
+package emilio.tolosa.finai.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import emilio.tolosa.finai.BuildConfig
+import emilio.tolosa.finai.data.*
+import emilio.tolosa.finai.network.*
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+class PresupuestoUi(val categoria: String, val limite: Double, val gastado: Double) {
+    val restante get() = limite - gastado
+    val progreso get() = if (limite > 0) ((gastado / limite) * 100).toInt().coerceIn(0, 100) else 0
+}
+
+class FinanzasViewModel(app: Application) : AndroidViewModel(app) {
+
+    private val dao = MovimientoDatabase.get(app).dao()
+    val store = DataStoreManager(app)
+
+    private fun <T> Flow<T>.estado(inicial: T) =
+        stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), inicial)
+
+    val movimientos = dao.todos().estado(emptyList())
+    val ultimos = dao.ultimos(5).estado(emptyList())
+    val ingresos = dao.totalIngresos().estado(0.0)
+    val gastos = dao.totalGastos().estado(0.0)
+    val balance = combine(ingresos, gastos) { i, g -> i - g }.estado(0.0)
+    val metas = dao.metas().estado(emptyList())
+
+    val presupuestos = combine(dao.presupuestos(), dao.gastosPorCategoria()) { pres, gastos ->
+        pres.map { p ->
+            PresupuestoUi(p.categoria, p.limite, gastos.find { it.categoria == p.categoria }?.total ?: 0.0)
+        }
+    }.estado(emptyList())
+
+    private val _tasas = MutableStateFlow<Map<String, Double>>(emptyMap())
+    val tasas: StateFlow<Map<String, Double>> = _tasas
+
+    fun agregarMovimiento(m: Movimiento) = viewModelScope.launch { dao.insertar(m) }
+    fun borrarMovimiento(m: Movimiento) = viewModelScope.launch { dao.borrar(m) }
+    fun agregarMeta(nombre: String, objetivo: Double) =
+        viewModelScope.launch { dao.insertarMeta(Meta(nombre = nombre, objetivo = objetivo)) }
+    fun abonarMeta(meta: Meta, monto: Double) =
+        viewModelScope.launch { dao.actualizarMeta(meta.copy(ahorrado = meta.ahorrado + monto)) }
+    fun guardarPresupuesto(cat: String, limite: Double) =
+        viewModelScope.launch { dao.guardarPresupuesto(Presupuesto(cat, limite)) }
+
+    fun cargarTasas(base: String) = viewModelScope.launch {
+        try {
+            val r = ApiClient.exchange.latest(BuildConfig.EXCHANGE_KEY, base)
+            if (r.result == "success") _tasas.value = r.conversion_rates
+        } catch (_: Exception) { }
+    }
+
+    fun resumenParaIa(): String {
+        val movs = movimientos.value.take(15).joinToString("\n") {
+            "- ${it.titulo} (${it.categoria}): ${if (it.esIngreso) "+" else "-"}${it.monto}"
+        }
+        val pres = presupuestos.value.joinToString("\n") {
+            "- ${it.categoria}: límite ${it.limite}, gastado ${it.gastado}"
+        }
+        return """
+            Balance: ${balance.value}. Ingresos: ${ingresos.value}. Gastos: ${gastos.value}.
+            Últimos movimientos:
+            $movs
+            Presupuestos:
+            $pres
+        """.trimIndent()
+    }
+
+    fun importarDeBelvo(onResultado: (String) -> Unit) = viewModelScope.launch {
+        try {
+            val link = ApiClient.belvo.crearLink(
+                LinkRequest(institution = "INSTITUCION_SANDBOX", username = "USUARIO_PRUEBA", password = "PASS_PRUEBA")
+            )
+            val txs = ApiClient.belvo.transacciones(
+                TxRequest(link.id, date_from = "2026-08-01", date_to = "2026-09-23")
+            )
+            txs.forEach { t ->
+                dao.insertar(
+                    Movimiento(
+                        titulo = t.description ?: "Movimiento bancario",
+                        categoria = t.category ?: "Otros",
+                        monto = kotlin.math.abs(t.amount),
+                        esIngreso = t.type == "INFLOW",
+                        origen = "belvo",
+                        externalId = t.id
+                    )
+                )
+            }
+            onResultado("Se importaron ${txs.size} movimientos")
+        } catch (e: Exception) {
+            onResultado("Error con Belvo: ${e.message}")
+        }
+    }
+
+    fun sembrarDatosDemo() = viewModelScope.launch {
+        if (movimientos.value.isEmpty()) {
+            dao.insertar(Movimiento(titulo = "Nómina", categoria = "Ingreso", monto = 25000.0, esIngreso = true))
+            dao.insertar(Movimiento(titulo = "Supermercado", categoria = "Comida", monto = 1200.0, esIngreso = false))
+            dao.insertar(Movimiento(titulo = "Netflix", categoria = "Entretenimiento", monto = 299.0, esIngreso = false))
+            dao.guardarPresupuesto(Presupuesto("Comida", 2800.0))
+            dao.guardarPresupuesto(Presupuesto("Transporte", 1500.0))
+            dao.guardarPresupuesto(Presupuesto("Entretenimiento", 700.0))
+        }
+    }
+}
+```
+
+---
+
+## Paso 11 — Login / Registro / Router
+
+### 11.1 `MainActivity.kt`
 
 ```kotlin
 package emilio.tolosa.finai
 
-import java.security.MessageDigest
-import java.text.NumberFormat
-import java.util.Locale
+import android.content.Intent
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import emilio.tolosa.finai.data.DataStoreManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
-fun String.sha256(): String =
-    MessageDigest.getInstance("SHA-256").digest(toByteArray())
-        .joinToString("") { "%02x".format(it) }
-
-fun Double.mx(): String =
-    NumberFormat.getCurrencyInstance(Locale("es", "MX")).format(this)
-```
-
-### 5.2 `MainActivity` como "router" (sin pantalla)
-
-```kotlin
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -625,11 +567,24 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### 5.3 `LoginActivity`
+### 11.2 `activity_login.xml` — IDs necesarios
 
-Los IDs de `activity_login.xml` que usaremos: `etEmail`, `etPassword`, `btnLogin`, `tvRegistro`.
+Confirma que tu layout tenga: `etEmail`, `etPassword`, `btnLogin`, `tvRegistro`.
+
+### 11.3 `LoginActivity.kt`
 
 ```kotlin
+package emilio.tolosa.finai
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import emilio.tolosa.finai.data.DataStoreManager
+import emilio.tolosa.finai.databinding.ActivityLoginBinding
+import kotlinx.coroutines.launch
+
 class LoginActivity : AppCompatActivity() {
     private lateinit var b: ActivityLoginBinding
 
@@ -662,37 +617,57 @@ class LoginActivity : AppCompatActivity() {
 }
 ```
 
-### 5.4 `RegisterActivity`
+### 11.4 `activity_register.xml` — IDs necesarios
+
+`etNombre`, `etEmail`, `etPassword`, `btnRegistrar`.
+
+### 11.5 `RegisterActivity.kt`
 
 ```kotlin
-b.btnRegistrar.setOnClickListener {
-    val nombre = b.etNombre.text.toString().trim()
-    val email = b.etEmail.text.toString().trim()
-    val pass = b.etPassword.text.toString()
+package emilio.tolosa.finai
 
-    if (!Patterns.EMAIL_ADDRESS.matcher(email).matches() || pass.length < 6 || nombre.isEmpty()) {
-        Toast.makeText(this, "Revisa los datos (contraseña mínimo 6)", Toast.LENGTH_SHORT).show()
-        return@setOnClickListener
-    }
-    lifecycleScope.launch {
-        DataStoreManager(this@RegisterActivity).registrar(nombre, email, pass.sha256())
-        startActivity(Intent(this@RegisterActivity, HomeActivity::class.java))
-        finishAffinity()
+import android.content.Intent
+import android.os.Bundle
+import android.util.Patterns
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import emilio.tolosa.finai.data.DataStoreManager
+import emilio.tolosa.finai.databinding.ActivityRegisterBinding
+import kotlinx.coroutines.launch
+
+class RegisterActivity : AppCompatActivity() {
+    private lateinit var b: ActivityRegisterBinding
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        b = ActivityRegisterBinding.inflate(layoutInflater)
+        setContentView(b.root)
+
+        b.btnRegistrar.setOnClickListener {
+            val nombre = b.etNombre.text.toString().trim()
+            val email = b.etEmail.text.toString().trim()
+            val pass = b.etPassword.text.toString()
+
+            if (!Patterns.EMAIL_ADDRESS.matcher(email).matches() || pass.length < 6 || nombre.isEmpty()) {
+                Toast.makeText(this, "Revisa los datos (contraseña mínimo 6)", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            lifecycleScope.launch {
+                DataStoreManager(this@RegisterActivity).registrar(nombre, email, pass.sha256())
+                startActivity(Intent(this@RegisterActivity, HomeActivity::class.java))
+                finishAffinity()
+            }
+        }
     }
 }
 ```
 
-> Los botones "Google" y "GitHub" de tu diseño: déjalos como visuales y muestra un Toast "Próximamente". Implementarlos requiere Firebase/OAuth y no es necesario.
-
 ---
 
-## 6. `HomeActivity`: contenedor de Fragments
+## Paso 12 — `HomeActivity` (contenedor de fragments + barra inferior)
 
-### ¿Para qué sirve?
-
-Es la "carcasa": muestra la barra inferior y cambia el Fragment según la pestaña.
-
-### 6.1 Menú: `res/menu/bottom_nav.xml`
+### 12.1 `res/menu/bottom_nav.xml` (créalo: clic derecho en `res` → New → Android Resource File → Resource type: Menu)
 
 ```xml
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
@@ -704,9 +679,9 @@ Es la "carcasa": muestra la barra inferior y cambia el Fragment según la pesta�
 </menu>
 ```
 
-Los íconos: clic derecho en `drawable` → New → Vector Asset → busca "home", "swap horiz", "pie chart", "flag", "person".
+Crea los íconos: clic derecho en `drawable` → New → Vector Asset → busca "home", "swap horiz", "pie chart", "flag", "person", "auto awesome" (para `ic_sparkle`).
 
-### 6.2 `activity_home.xml`
+### 12.2 `activity_home.xml`
 
 ```xml
 <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -725,7 +700,6 @@ Los íconos: clic derecho en `drawable` → New → Vector Asset → busca "home
         android:layout_gravity="bottom"
         app:menu="@menu/bottom_nav"/>
 
-    <!-- Botón de IA flotante -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabIa"
         android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -735,9 +709,18 @@ Los íconos: clic derecho en `drawable` → New → Vector Asset → busca "home
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 ```
 
-### 6.3 `HomeActivity.kt`
+### 12.3 `HomeActivity.kt`
 
 ```kotlin
+package emilio.tolosa.finai
+
+import android.content.Intent
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import emilio.tolosa.finai.databinding.ActivityHomeBinding
+import emilio.tolosa.finai.ui.*
+
 class HomeActivity : AppCompatActivity() {
     private lateinit var b: ActivityHomeBinding
 
@@ -773,86 +756,27 @@ class HomeActivity : AppCompatActivity() {
 
 ---
 
-## 7. `FinanzasViewModel`
+## Paso 13 — Fragments (código `.kt` completo)
 
-### ¿Para qué sirve?
+Como ya tienes los `.xml` creados, solo confirma que los IDs coincidan con los que usa este código (si tu XML usa otros nombres de ID, cambia el código o el XML para que coincidan — lo importante es que sean iguales en ambos lados).
 
-Concentra **todos los cálculos** (balance, progreso de presupuestos, etc.). Los Fragments solo muestran datos. Como se crea con `activityViewModels()`, **todos los fragments comparten la misma instancia** y ven los mismos datos.
+### 13.1 `ui/MovimientoAdapter.kt`
 
-```kotlin
-package emilio.tolosa.finai.viewmodel
-
-class PresupuestoUi(val categoria: String, val limite: Double, val gastado: Double) {
-    val restante get() = limite - gastado
-    val progreso get() = if (limite > 0) ((gastado / limite) * 100).toInt().coerceIn(0, 100) else 0
-}
-
-class FinanzasViewModel(app: Application) : AndroidViewModel(app) {
-
-    private val dao = MovimientoDatabase.get(app).dao()
-    val store = DataStoreManager(app)
-
-    private fun <T> Flow<T>.estado(inicial: T) =
-        stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), inicial)
-
-    // ---- Datos de Room ----
-    val movimientos = dao.todos().estado(emptyList())
-    val ultimos = dao.ultimos(5).estado(emptyList())
-    val ingresos = dao.totalIngresos().estado(0.0)
-    val gastos = dao.totalGastos().estado(0.0)
-    val balance = combine(ingresos, gastos) { i, g -> i - g }.estado(0.0)
-    val metas = dao.metas().estado(emptyList())
-
-    // Presupuesto por categoría: une límite (tabla presupuestos) con gasto real
-    val presupuestos = combine(dao.presupuestos(), dao.gastosPorCategoria()) { pres, gastos ->
-        pres.map { p ->
-            PresupuestoUi(p.categoria, p.limite, gastos.find { it.categoria == p.categoria }?.total ?: 0.0)
-        }
-    }.estado(emptyList())
-
-    // ---- Acciones ----
-    fun agregarMovimiento(m: Movimiento) = viewModelScope.launch { dao.insertar(m) }
-    fun borrarMovimiento(m: Movimiento) = viewModelScope.launch { dao.borrar(m) }
-    fun agregarMeta(nombre: String, objetivo: Double) =
-        viewModelScope.launch { dao.insertarMeta(Meta(nombre = nombre, objetivo = objetivo)) }
-    fun abonarMeta(meta: Meta, monto: Double) =
-        viewModelScope.launch { dao.actualizarMeta(meta.copy(ahorrado = meta.ahorrado + monto)) }
-    fun guardarPresupuesto(cat: String, limite: Double) =
-        viewModelScope.launch { dao.guardarPresupuesto(Presupuesto(cat, limite)) }
-
-    // Datos de ejemplo la primera vez (útil para que se vea como tu diseño)
-    fun sembrarDatosDemo() = viewModelScope.launch {
-        if (movimientos.value.isEmpty()) {
-            dao.insertar(Movimiento(titulo = "Nómina", categoria = "Ingreso", monto = 25000.0, esIngreso = true))
-            dao.insertar(Movimiento(titulo = "Supermercado", categoria = "Comida", monto = 1200.0, esIngreso = false))
-            dao.insertar(Movimiento(titulo = "Netflix", categoria = "Entretenimiento", monto = 299.0, esIngreso = false))
-            dao.guardarPresupuesto(Presupuesto("Comida", 2800.0))
-            dao.guardarPresupuesto(Presupuesto("Transporte", 1500.0))
-            dao.guardarPresupuesto(Presupuesto("Entretenimiento", 700.0))
-        }
-    }
-}
-```
-
----
-
-## 8. Fragment de Inicio (`HomeFragment`)
-
-### ¿Qué muestra?
-
-La tarjeta azul con el balance, las tarjetas de Ingresos y Gastos, el ahorro del mes y los últimos movimientos.
-
-### 8.1 IDs sugeridos en `fragment_home.xml`
-
-`tvBalance`, `tvIngresos`, `tvGastos`, `tvBalanceUsd`, `progressAhorro`, `rvUltimos`.
-
-### 8.2 Adaptador de la lista: `MovimientoAdapter.kt`
-
-**¿Para qué sirve?** RecyclerView necesita un adaptador que convierta cada `Movimiento` en una fila visual. `ListAdapter` + `DiffUtil` calcula automáticamente qué filas cambiaron.
-
-Layout `item_movimiento.xml` con IDs: `tvTitulo`, `tvDetalle`, `tvMonto`.
+IDs esperados en `item_movimiento.xml`: `tvTitulo`, `tvDetalle`, `tvMonto`.
 
 ```kotlin
+package emilio.tolosa.finai.ui
+
+import android.graphics.Color
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import emilio.tolosa.finai.data.Movimiento
+import emilio.tolosa.finai.databinding.ItemMovimientoBinding
+import emilio.tolosa.finai.mx
+
 class MovimientoAdapter(
     private val onLongClick: ((Movimiento) -> Unit)? = null
 ) : ListAdapter<Movimiento, MovimientoAdapter.VH>(Diff) {
@@ -881,9 +805,27 @@ class MovimientoAdapter(
 }
 ```
 
-### 8.3 `HomeFragment.kt`
+### 13.2 `ui/HomeFragment.kt`
+
+IDs esperados en `fragment_home.xml`: `tvBalance`, `tvIngresos`, `tvGastos`, `tvBalanceUsd`, `rvUltimos`.
 
 ```kotlin
+package emilio.tolosa.finai.ui
+
+import android.os.Bundle
+import android.view.View
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import emilio.tolosa.finai.R
+import emilio.tolosa.finai.databinding.FragmentHomeBinding
+import emilio.tolosa.finai.mx
+import emilio.tolosa.finai.viewmodel.FinanzasViewModel
+import kotlinx.coroutines.launch
+
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private val vm: FinanzasViewModel by activityViewModels()
@@ -898,7 +840,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         b.rvUltimos.adapter = adapter
 
         vm.sembrarDatosDemo()
-        vm.cargarTasas("MXN")   // API ExchangeRate (sección 12)
+        vm.cargarTasas("MXN")
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -920,55 +862,24 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 }
 ```
 
-**Puntos clave a explicar:**
-- `repeatOnLifecycle(STARTED)`: solo escucha cambios cuando el Fragment está visible (ahorra batería).
-- `_b = null` en `onDestroyView`: evita fugas de memoria (los Fragments viven más que sus vistas).
+### 13.3 `ui/NuevoMovimientoDialog.kt`
 
----
-
-## 9. Movimientos + "Nuevo movimiento"
-
-### 9.1 `MovimientosFragment`
-
-Layout: `rvMovimientos` (RecyclerView) y `btnNuevo` (botón "+ Nuevo movimiento").
+IDs esperados en `dialog_movimiento.xml`: `etTitulo`, `etMonto`, `spCategoria`, `swIngreso`.
 
 ```kotlin
-class MovimientosFragment : Fragment(R.layout.fragment_movimientos) {
-    private val vm: FinanzasViewModel by activityViewModels()
+package emilio.tolosa.finai.ui
 
-    override fun onViewCreated(view: View, s: Bundle?) {
-        val b = FragmentMovimientosBinding.bind(view)
+import android.app.Dialog
+import android.os.Bundle
+import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import emilio.tolosa.finai.data.Movimiento
+import emilio.tolosa.finai.databinding.DialogMovimientoBinding
+import emilio.tolosa.finai.viewmodel.FinanzasViewModel
 
-        // Mantener pulsado = borrar
-        val adapter = MovimientoAdapter { m ->
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("¿Borrar ${m.titulo}?")
-                .setPositiveButton("Borrar") { _, _ -> vm.borrarMovimiento(m) }
-                .setNegativeButton("Cancelar", null).show()
-        }
-        b.rvMovimientos.layoutManager = LinearLayoutManager(requireContext())
-        b.rvMovimientos.adapter = adapter
-
-        b.btnNuevo.setOnClickListener { NuevoMovimientoDialog().show(childFragmentManager, "nuevo") }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.movimientos.collect { adapter.submitList(it) }
-            }
-        }
-    }
-}
-```
-
-> Tu diseño separa "INGRESOS" y "EGRESOS" con encabezados. Para lograrlo más adelante, usa dos `RecyclerView` o un adaptador con dos tipos de vista (`getItemViewType`). Empieza con una lista simple y luego mejoras.
-
-### 9.2 `NuevoMovimientoDialog.kt`
-
-**¿Para qué sirve?** Formulario emergente para capturar título, monto, categoría y tipo. Es reutilizable: también lo abrirá el sensor (agitar) y la cámara.
-
-`dialog_movimiento.xml`: `etTitulo`, `etMonto`, `spCategoria` (Spinner), `swIngreso` (Switch).
-
-```kotlin
 class NuevoMovimientoDialog(
     private val tituloInicial: String = "",
     private val montoInicial: Double? = null,
@@ -1011,23 +922,70 @@ class NuevoMovimientoDialog(
 }
 ```
 
----
+### 13.4 `ui/MovimientosFragment.kt`
 
-## 10. Presupuesto
-
-### ¿Para qué sirve?
-
-Define cuánto puedes gastar por categoría y muestra cuánto llevas (barras de progreso). Cruza dos tablas: `presupuestos` (límite) y `movimientos` (gasto real). Ese cruce ya lo hace el ViewModel.
-
-### 10.1 Layout
-
-- `tvPresupuestoMensual` (el "$10,000").
-- `rvPresupuestos` con `item_presupuesto.xml`: `tvCategoria`, `tvLimite`, `progressBar` (`LinearProgressIndicator`), `tvUso`, `tvRestan`.
-- `tvDisponible` y `btnEditar`.
-
-### 10.2 Adaptador
+IDs esperados en `fragment_movimientos.xml`: `rvMovimientos`, `btnNuevo`.
 
 ```kotlin
+package emilio.tolosa.finai.ui
+
+import android.os.Bundle
+import android.view.View
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import emilio.tolosa.finai.R
+import emilio.tolosa.finai.databinding.FragmentMovimientosBinding
+import emilio.tolosa.finai.viewmodel.FinanzasViewModel
+import kotlinx.coroutines.launch
+
+class MovimientosFragment : Fragment(R.layout.fragment_movimientos) {
+    private val vm: FinanzasViewModel by activityViewModels()
+
+    override fun onViewCreated(view: View, s: Bundle?) {
+        val b = FragmentMovimientosBinding.bind(view)
+
+        val adapter = MovimientoAdapter { m ->
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("¿Borrar ${m.titulo}?")
+                .setPositiveButton("Borrar") { _, _ -> vm.borrarMovimiento(m) }
+                .setNegativeButton("Cancelar", null).show()
+        }
+        b.rvMovimientos.layoutManager = LinearLayoutManager(requireContext())
+        b.rvMovimientos.adapter = adapter
+
+        b.btnNuevo.setOnClickListener { NuevoMovimientoDialog().show(childFragmentManager, "nuevo") }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                vm.movimientos.collect { adapter.submitList(it) }
+            }
+        }
+    }
+}
+```
+
+### 13.5 `ui/PresupuestoAdapter.kt`
+
+IDs esperados en `item_presupuesto.xml`: `tvCategoria`, `tvLimite`, `progressBar`, `tvUso`, `tvRestan`.
+
+```kotlin
+package emilio.tolosa.finai.ui
+
+import android.graphics.Color
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import emilio.tolosa.finai.databinding.ItemPresupuestoBinding
+import emilio.tolosa.finai.mx
+import emilio.tolosa.finai.viewmodel.PresupuestoUi
+
 class PresupuestoAdapter : ListAdapter<PresupuestoUi, PresupuestoAdapter.VH>(Diff) {
     object Diff : DiffUtil.ItemCallback<PresupuestoUi>() {
         override fun areItemsTheSame(a: PresupuestoUi, b: PresupuestoUi) = a.categoria == b.categoria
@@ -1046,60 +1004,217 @@ class PresupuestoAdapter : ListAdapter<PresupuestoUi, PresupuestoAdapter.VH>(Dif
         h.b.progressBar.progress = p.progreso
         h.b.tvUso.text = "Uso: ${p.progreso}%"
         h.b.tvRestan.text = "Restan ${p.restante.mx()}"
-        // Rojo si te pasaste del 90%
         val color = if (p.progreso >= 90) "#E5484D" else "#4F5BFF"
         h.b.progressBar.setIndicatorColor(Color.parseColor(color))
     }
 }
 ```
 
-### 10.3 Fragment
+### 13.6 `ui/PresupuestoFragment.kt`
+
+IDs esperados en `fragment_presupuesto.xml`: `tvPresupuestoMensual`, `rvPresupuestos`, `tvDisponible`, `btnEditar`.
 
 ```kotlin
-viewLifecycleOwner.lifecycleScope.launch {
-    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-        launch { vm.presupuestos.collect { lista ->
-            adapter.submitList(lista)
-            val totalRestante = lista.sumOf { it.restante }
-            b.tvDisponible.text = totalRestante.mx()
-        } }
-        launch { vm.store.presupuestoMensual.collect { b.tvPresupuestoMensual.text = it.mx() } }
+package emilio.tolosa.finai.ui
+
+import android.os.Bundle
+import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import emilio.tolosa.finai.R
+import emilio.tolosa.finai.databinding.FragmentPresupuestoBinding
+import emilio.tolosa.finai.mx
+import emilio.tolosa.finai.viewmodel.FinanzasViewModel
+import kotlinx.coroutines.launch
+
+class PresupuestoFragment : Fragment(R.layout.fragment_presupuesto) {
+    private val vm: FinanzasViewModel by activityViewModels()
+
+    override fun onViewCreated(view: View, s: Bundle?) {
+        val b = FragmentPresupuestoBinding.bind(view)
+        val adapter = PresupuestoAdapter()
+        b.rvPresupuestos.layoutManager = LinearLayoutManager(requireContext())
+        b.rvPresupuestos.adapter = adapter
+
+        b.btnEditar.setOnClickListener {
+            val etCat = EditText(requireContext()).apply { hint = "Categoría" }
+            val etLim = EditText(requireContext()).apply { hint = "Límite"; inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL }
+            val layout = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(40, 20, 40, 20)
+                addView(etCat); addView(etLim)
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Editar presupuesto")
+                .setView(layout)
+                .setPositiveButton("Guardar") { _, _ ->
+                    val cat = etCat.text.toString().trim()
+                    val lim = etLim.text.toString().toDoubleOrNull()
+                    if (cat.isEmpty() || lim == null) {
+                        Toast.makeText(requireContext(), "Datos inválidos", Toast.LENGTH_SHORT).show()
+                    } else vm.guardarPresupuesto(cat, lim)
+                }
+                .setNegativeButton("Cancelar", null).show()
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { vm.presupuestos.collect { lista ->
+                    adapter.submitList(lista)
+                    b.tvDisponible.text = lista.sumOf { it.restante }.mx()
+                } }
+                launch { vm.store.presupuestoMensual.collect { b.tvPresupuestoMensual.text = it.mx() } }
+            }
+        }
     }
 }
-
-// "Editar presupuesto": un diálogo con categoría + límite que llama a vm.guardarPresupuesto(cat, limite)
 ```
 
----
+### 13.7 Adaptador de Metas: `ui/MetaAdapter.kt`
 
-## 11. Metas y Perfil
-
-### 11.1 Metas
-
-**¿Para qué sirve?** Objetivos de ahorro (laptop, viaje, fondo de emergencia). El porcentaje = ahorrado / objetivo.
-
-`item_meta.xml`: `tvNombre`, `tvPorcentaje`, `progressMeta`, `tvAhorrado`, `tvObjetivo`, `btnAbonar`.
+IDs esperados en `item_meta.xml`: `tvNombre`, `tvPorcentaje`, `progressMeta`, `tvAhorrado`, `tvObjetivo`, `btnAbonar`.
 
 ```kotlin
-override fun onBindViewHolder(h: VH, i: Int) {
-    val m = getItem(i)
-    val pct = ((m.ahorrado / m.objetivo) * 100).toInt().coerceIn(0, 100)
-    h.b.tvNombre.text = m.nombre
-    h.b.tvPorcentaje.text = "$pct%"
-    h.b.progressMeta.progress = pct
-    h.b.tvAhorrado.text = "Ahorrado: ${m.ahorrado.mx()}"
-    h.b.tvObjetivo.text = "Meta: ${m.objetivo.mx()}"
-    h.b.btnAbonar.setOnClickListener { onAbonar(m) }   // abre diálogo → vm.abonarMeta(m, monto)
+package emilio.tolosa.finai.ui
+
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import emilio.tolosa.finai.data.Meta
+import emilio.tolosa.finai.databinding.ItemMetaBinding
+import emilio.tolosa.finai.mx
+
+class MetaAdapter(
+    private val onAbonar: (Meta) -> Unit
+) : ListAdapter<Meta, MetaAdapter.VH>(Diff) {
+
+    object Diff : DiffUtil.ItemCallback<Meta>() {
+        override fun areItemsTheSame(a: Meta, b: Meta) = a.id == b.id
+        override fun areContentsTheSame(a: Meta, b: Meta) = a == b
+    }
+    inner class VH(val b: ItemMetaBinding) : RecyclerView.ViewHolder(b.root)
+
+    override fun onCreateViewHolder(p: ViewGroup, t: Int) =
+        VH(ItemMetaBinding.inflate(LayoutInflater.from(p.context), p, false))
+
+    override fun onBindViewHolder(h: VH, i: Int) {
+        val m = getItem(i)
+        val pct = ((m.ahorrado / m.objetivo) * 100).toInt().coerceIn(0, 100)
+        h.b.tvNombre.text = m.nombre
+        h.b.tvPorcentaje.text = "$pct%"
+        h.b.progressMeta.progress = pct
+        h.b.tvAhorrado.text = "Ahorrado: ${m.ahorrado.mx()}"
+        h.b.tvObjetivo.text = "Meta: ${m.objetivo.mx()}"
+        h.b.btnAbonar.setOnClickListener { onAbonar(m) }
+    }
 }
 ```
 
-El botón "+ Nueva meta" abre un diálogo (nombre + objetivo) que llama a `vm.agregarMeta(...)`.
+### 13.8 `ui/MetasFragment.kt`
 
-### 11.2 Perfil
-
-**¿Para qué sirve?** Muestra datos del usuario, permite cambiar moneda y cerrar sesión.
+IDs esperados en `fragment_metas.xml`: `rvMetas`, `btnNuevaMeta`.
 
 ```kotlin
+package emilio.tolosa.finai.ui
+
+import android.os.Bundle
+import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import emilio.tolosa.finai.R
+import emilio.tolosa.finai.databinding.FragmentMetasBinding
+import emilio.tolosa.finai.viewmodel.FinanzasViewModel
+import kotlinx.coroutines.launch
+
+class MetasFragment : Fragment(R.layout.fragment_metas) {
+    private val vm: FinanzasViewModel by activityViewModels()
+
+    override fun onViewCreated(view: View, s: Bundle?) {
+        val b = FragmentMetasBinding.bind(view)
+
+        val adapter = MetaAdapter { meta ->
+            val et = EditText(requireContext()).apply { hint = "Monto a abonar" }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Abonar a ${meta.nombre}")
+                .setView(LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.VERTICAL; setPadding(40, 20, 40, 20); addView(et)
+                })
+                .setPositiveButton("Abonar") { _, _ ->
+                    et.text.toString().toDoubleOrNull()?.let { vm.abonarMeta(meta, it) }
+                        ?: Toast.makeText(requireContext(), "Monto inválido", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancelar", null).show()
+        }
+        b.rvMetas.layoutManager = LinearLayoutManager(requireContext())
+        b.rvMetas.adapter = adapter
+
+        b.btnNuevaMeta.setOnClickListener {
+            val etNombre = EditText(requireContext()).apply { hint = "Nombre de la meta" }
+            val etObjetivo = EditText(requireContext()).apply { hint = "Objetivo ($)" }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Nueva meta")
+                .setView(LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.VERTICAL; setPadding(40, 20, 40, 20)
+                    addView(etNombre); addView(etObjetivo)
+                })
+                .setPositiveButton("Crear") { _, _ ->
+                    val obj = etObjetivo.text.toString().toDoubleOrNull()
+                    if (etNombre.text.isNullOrBlank() || obj == null) {
+                        Toast.makeText(requireContext(), "Datos inválidos", Toast.LENGTH_SHORT).show()
+                    } else vm.agregarMeta(etNombre.text.toString(), obj)
+                }
+                .setNegativeButton("Cancelar", null).show()
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                vm.metas.collect { adapter.submitList(it) }
+            }
+        }
+    }
+}
+```
+
+### 13.9 `ui/PerfilFragment.kt`
+
+IDs esperados en `fragment_perfil.xml`: `tvNombre`, `tvEmail`, `spMoneda`, `btnCerrarSesion`.
+
+```kotlin
+package emilio.tolosa.finai.ui
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import emilio.tolosa.finai.LoginActivity
+import emilio.tolosa.finai.R
+import emilio.tolosa.finai.databinding.FragmentPerfilBinding
+import emilio.tolosa.finai.viewmodel.FinanzasViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+
 class PerfilFragment : Fragment(R.layout.fragment_perfil) {
     private val vm: FinanzasViewModel by activityViewModels()
 
@@ -1111,7 +1226,6 @@ class PerfilFragment : Fragment(R.layout.fragment_perfil) {
             b.tvEmail.text = vm.store.email.first()
         }
 
-        // Moneda preferida (la usará ExchangeRate)
         val monedas = listOf("MXN", "USD", "EUR")
         b.spMoneda.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, monedas)
         b.spMoneda.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -1134,166 +1248,72 @@ class PerfilFragment : Fragment(R.layout.fragment_perfil) {
 
 ---
 
-## 12. Las tres APIs
+## Paso 14 — Asistente de IA (`AIAssistantActivity`)
 
-### Resumen: ¿qué hace cada una en Finai?
+IDs necesarios en `activity_ai_assistant.xml`: `rvChat` (RecyclerView), `etMensaje` (EditText), `btnEnviar` (Button), `progress` (ProgressBar).
 
-| API | Para qué la usamos | Requiere |
-|---|---|---|
-| **ExchangeRate** | Mostrar tu balance en otras monedas (USD, EUR) | API key gratuita |
-| **OpenAI** | Asistente financiero (chat) + leer tickets con la cámara | API key con saldo |
-| **Belvo** | Importar movimientos bancarios (datos de prueba en sandbox) | Cuenta de desarrollador |
-
-### 12.1 Base común: `network/ApiClient.kt`
-
-Un solo archivo que crea los clientes Retrofit.
+### 14.1 `ui/ChatAdapter.kt` (simple, lista de textos)
 
 ```kotlin
-package emilio.tolosa.finai.network
+package emilio.tolosa.finai.ui
 
-import emilio.tolosa.finai.BuildConfig
-import okhttp3.*
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 
-object ApiClient {
+class ChatAdapter : RecyclerView.Adapter<ChatAdapter.VH>() {
+    private val mensajes = mutableListOf<String>()
 
-    private val log = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
+    inner class VH(val tv: TextView) : RecyclerView.ViewHolder(tv)
 
-    private fun http(vararg extra: Interceptor) = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)   // OpenAI puede tardar
-        .apply { extra.forEach { addInterceptor(it) } }
-        .addInterceptor(log)
-        .build()
-
-    private fun retrofit(base: String, client: OkHttpClient) = Retrofit.Builder()
-        .baseUrl(base)
-        .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-
-    val exchange: ExchangeApi by lazy {
-        retrofit("https://v6.exchangerate-api.com/", http()).create(ExchangeApi::class.java)
+    fun submit(lista: List<String>) {
+        mensajes.clear(); mensajes.addAll(lista)
+        notifyDataSetChanged()
     }
 
-    val openai: OpenAiApi by lazy {
-        val auth = Interceptor { chain ->
-            chain.proceed(chain.request().newBuilder()
-                .header("Authorization", "Bearer ${BuildConfig.OPENAI_KEY}").build())
-        }
-        retrofit("https://api.openai.com/", http(auth)).create(OpenAiApi::class.java)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val tv = TextView(parent.context).apply { setPadding(24, 16, 24, 16); textSize = 15f }
+        return VH(tv)
     }
-
-    val belvo: BelvoApi by lazy {
-        // Belvo usa autenticación "Basic" con secretId:secretPassword
-        val cred = Credentials.basic(BuildConfig.BELVO_ID, BuildConfig.BELVO_SECRET)
-        val auth = Interceptor { chain ->
-            chain.proceed(chain.request().newBuilder().header("Authorization", cred).build())
-        }
-        retrofit("https://sandbox.belvo.com/", http(auth)).create(BelvoApi::class.java)
-    }
+    override fun onBindViewHolder(holder: VH, position: Int) { holder.tv.text = mensajes[position] }
+    override fun getItemCount() = mensajes.size
 }
 ```
 
-### 12.2 ExchangeRate (tipo de cambio)
-
-**Paso 1.** Crea cuenta en https://www.exchangerate-api.com y copia tu API key a `local.properties` (`EXCHANGE_KEY`).
-
-**Paso 2.** Interfaz:
+### 14.2 `AIAssistantActivity.kt`
 
 ```kotlin
-interface ExchangeApi {
-    @GET("v6/{key}/latest/{base}")
-    suspend fun latest(@Path("key") key: String, @Path("base") base: String): ExchangeResponse
-}
+package emilio.tolosa.finai
 
-data class ExchangeResponse(
-    val result: String,
-    val base_code: String,
-    val conversion_rates: Map<String, Double>  // {"USD":0.054,"EUR":0.05,...}
-)
-```
+import android.os.Bundle
+import android.view.View
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import emilio.tolosa.finai.databinding.ActivityAiAssistantBinding
+import emilio.tolosa.finai.network.*
+import emilio.tolosa.finai.ui.ChatAdapter
+import emilio.tolosa.finai.viewmodel.FinanzasViewModel
+import kotlinx.coroutines.launch
 
-**Paso 3.** En `FinanzasViewModel` agrega:
-
-```kotlin
-private val _tasas = MutableStateFlow<Map<String, Double>>(emptyMap())
-val tasas: StateFlow<Map<String, Double>> = _tasas
-
-fun cargarTasas(base: String) = viewModelScope.launch {
-    try {
-        val r = ApiClient.exchange.latest(BuildConfig.EXCHANGE_KEY, base)
-        if (r.result == "success") _tasas.value = r.conversion_rates
-    } catch (e: Exception) {
-        // Sin internet o error: la app sigue funcionando sin conversión
-        Log.e("Exchange", "Error: ${e.message}")
-    }
-}
-```
-
-**Cómo lo explicas:** "Consulto cuánto vale 1 MXN en otras monedas y multiplico mi balance para mostrar el equivalente."
-
-> El plan gratuito tiene límite de peticiones mensuales. Llama a `cargarTasas` una vez al abrir Inicio, no en cada cambio.
-
-### 12.3 OpenAI (asistente financiero)
-
-**Paso 1.** Crea una API key en https://platform.openai.com, agrega saldo y pon un límite de gasto. Guarda la key en `local.properties`.
-
-**Paso 2.** Interfaz y modelos:
-
-```kotlin
-interface OpenAiApi {
-    @POST("v1/chat/completions")
-    suspend fun chat(@Body body: ChatRequest): ChatResponse
-}
-
-// content es Any porque puede ser un texto o una lista (texto + imagen)
-data class ChatMessage(val role: String, val content: Any)
-data class ChatRequest(val model: String = "gpt-4o-mini", val messages: List<ChatMessage>)
-data class ChatResponse(val choices: List<Choice>)
-data class Choice(val message: ChatMessage)
-```
-
-`gpt-4o-mini` es económico y soporta imágenes. Verifica en la documentación de OpenAI qué modelos hay disponibles cuando lo hagas.
-
-**Paso 3.** Añade a `FinanzasViewModel` un resumen de tus finanzas para dárselo a la IA como contexto:
-
-```kotlin
-fun resumenParaIa(): String {
-    val movs = movimientos.value.take(15).joinToString("\n") {
-        "- ${it.titulo} (${it.categoria}): ${if (it.esIngreso) "+" else "-"}${it.monto}"
-    }
-    val pres = presupuestos.value.joinToString("\n") {
-        "- ${it.categoria}: límite ${it.limite}, gastado ${it.gastado}"
-    }
-    return """
-        Balance: ${balance.value}. Ingresos: ${ingresos.value}. Gastos: ${gastos.value}.
-        Últimos movimientos:
-        $movs
-        Presupuestos:
-        $pres
-    """.trimIndent()
-}
-```
-
-**Paso 4.** `AIAssistantActivity.kt` (layout: `rvChat`, `etMensaje`, `btnEnviar`, `progress`):
-
-```kotlin
 class AIAssistantActivity : AppCompatActivity() {
     private lateinit var b: ActivityAiAssistantBinding
     private val vm: FinanzasViewModel by viewModels()
     private val historial = mutableListOf<ChatMessage>()
-    private val visibles = mutableListOf<String>()   // lo que se muestra en pantalla
+    private val visibles = mutableListOf<String>()
+    private lateinit var adapter: ChatAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         b = ActivityAiAssistantBinding.inflate(layoutInflater)
         setContentView(b.root)
 
-        // "system" = las reglas del asistente. Nunca las ve el usuario.
+        adapter = ChatAdapter()
+        b.rvChat.layoutManager = LinearLayoutManager(this)
+        b.rvChat.adapter = adapter
+
         historial.add(ChatMessage("system", """
             Eres Finai, un asistente de finanzas personales para un estudiante en México.
             Responde en español, breve y claro, con consejos prácticos. Usa pesos mexicanos.
@@ -1327,111 +1347,44 @@ class AIAssistantActivity : AppCompatActivity() {
 
     private fun agregar(t: String) {
         visibles.add(t)
-        // Sencillo: usa un ArrayAdapter en un ListView o tu propio RecyclerView
-        (b.rvChat.adapter as? ChatAdapter)?.submit(visibles.toList())
+        adapter.submit(visibles.toList())
         b.rvChat.scrollToPosition(visibles.size - 1)
     }
 }
 ```
 
-> `historial` se manda completo en cada petición porque la API **no tiene memoria**: tú le pasas toda la conversación.
-
-Ideas de preguntas para la demo: "¿En qué gasté más este mes?", "¿Cómo puedo ahorrar para mi laptop?", "Arma un plan para reducir mis gastos en comida".
-
-### 12.4 Belvo (movimientos bancarios)
-
-**¿Para qué sirve?** Belvo es un servicio de *open banking* para Latinoamérica: se conecta a bancos y devuelve cuentas y transacciones. Con esto Finai importaría tus movimientos reales automáticamente.
-
-> ⚠️ **Limitación importante:** el flujo oficial de producción (widget de Belvo) requiere un backend para generar tokens. Por eso, para tu proyecto sin backend, se usa el **sandbox** con credenciales bancarias **falsas** que Belvo publica en su documentación. Confirma los endpoints y credenciales de prueba actuales en https://developers.belvo.com, porque pueden cambiar.
-
-**Paso 1.** Crea una cuenta en Belvo (dashboard de desarrollador), entra al entorno **sandbox** y crea las llaves (`secretId` y `secretPassword`). Guárdalas en `local.properties`.
-
-**Paso 2.** Interfaz:
-
-```kotlin
-interface BelvoApi {
-    // 1) Crear un "link" = la conexión con un banco de prueba
-    @POST("api/links/")
-    suspend fun crearLink(@Body body: LinkRequest): LinkResponse
-
-    // 2) Pedir transacciones de ese link
-    @POST("api/transactions/")
-    suspend fun transacciones(@Body body: TxRequest): List<BelvoTx>
-}
-
-data class LinkRequest(
-    val institution: String,        // institución de sandbox (ver docs de Belvo)
-    val username: String,           // usuario de prueba (ver docs)
-    val password: String,           // contraseña de prueba (ver docs)
-    val access_mode: String = "single"
-)
-data class LinkResponse(val id: String)
-
-data class TxRequest(val link: String, val date_from: String, val date_to: String) // "2026-09-01"
-
-data class BelvoTx(
-    val id: String,
-    val amount: Double,
-    val type: String,           // "INFLOW" (ingreso) | "OUTFLOW" (gasto)
-    val description: String?,
-    val category: String?,
-    val value_date: String?
-)
-```
-
-Si al probar la respuesta viene con otra estructura (por ejemplo paginada con `results`), ajusta el modelo mirando el log de Retrofit: es normal.
-
-**Paso 3.** En el ViewModel:
-
-```kotlin
-fun importarDeBelvo(onResultado: (String) -> Unit) = viewModelScope.launch {
-    try {
-        // Credenciales de prueba: cópialas de la documentación de sandbox de Belvo
-        val link = ApiClient.belvo.crearLink(
-            LinkRequest(institution = "INSTITUCION_SANDBOX", username = "USUARIO_PRUEBA", password = "PASS_PRUEBA")
-        )
-        val txs = ApiClient.belvo.transacciones(
-            TxRequest(link.id, date_from = "2026-08-01", date_to = "2026-09-23")
-        )
-        txs.forEach { t ->
-            dao.insertar(
-                Movimiento(
-                    titulo = t.description ?: "Movimiento bancario",
-                    categoria = t.category ?: "Otros",
-                    monto = kotlin.math.abs(t.amount),
-                    esIngreso = t.type == "INFLOW",
-                    origen = "belvo",
-                    externalId = t.id      // evita duplicados si importas dos veces
-                )
-            )
-        }
-        onResultado("Se importaron ${txs.size} movimientos")
-    } catch (e: Exception) {
-        onResultado("Error con Belvo: ${e.message}")
-    }
-}
-```
-
-**Paso 4.** Un botón "Importar del banco" en Movimientos o Perfil que llame a `vm.importarDeBelvo { msg -> Toast... }`.
-
-**Cómo lo explicas:** "Belvo actúa como puente con el banco. En producción se usaría un backend por seguridad; aquí uso sandbox con datos ficticios."
-
 ---
 
-## 13. Cámara y Sensores (extras que suman puntos)
+## Paso 15 — Cámara (`CameraActivity`)
 
-### 13.1 `CameraActivity`: foto de ticket → gasto automático
-
-**Flujo:** tomas foto → se codifica en Base64 → OpenAI la lee y devuelve JSON → se abre el diálogo prellenado.
-
-**Permiso en tiempo de ejecución + captura (simple):**
+IDs necesarios en `activity_camera.xml`: `btnFoto` (Button).
 
 ```kotlin
+package emilio.tolosa.finai
+
+import android.Manifest
+import android.graphics.Bitmap
+import android.os.Bundle
+import android.util.Base64
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.google.gson.Gson
+import emilio.tolosa.finai.databinding.ActivityCameraBinding
+import emilio.tolosa.finai.network.*
+import emilio.tolosa.finai.ui.NuevoMovimientoDialog
+import emilio.tolosa.finai.viewmodel.FinanzasViewModel
+import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+
+data class TicketIa(val titulo: String, val monto: Double, val categoria: String)
+
 class CameraActivity : AppCompatActivity() {
     private lateinit var b: ActivityCameraBinding
     private val vm: FinanzasViewModel by viewModels()
 
-    // Devuelve una miniatura (Bitmap). Suficiente para tickets legibles y sin FileProvider.
     private val tomarFoto = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
         if (bmp != null) analizar(bmp)
     }
@@ -1469,16 +1422,24 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 }
-data class TicketIa(val titulo: String, val monto: Double, val categoria: String)
 ```
 
-Nota: `NuevoMovimientoDialog` usa `activityViewModels()`, así que funciona dentro de una Activity con `supportFragmentManager` (la Activity es su dueña).
+---
 
-### 13.2 `SensorsActivity` / sensor: agitar para agregar un gasto
+## Paso 16 — Sensor de agitar (`SensorsActivity` o dentro de `HomeActivity`)
 
-**¿Para qué sirve el acelerómetro?** Detecta movimiento. Al agitar el teléfono abrimos el diálogo de "Nuevo movimiento" (registro rápido).
+### 16.1 `ShakeDetector.kt` (raíz del paquete)
 
 ```kotlin
+package emilio.tolosa.finai
+
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import kotlin.math.pow
+import kotlin.math.sqrt
+
 class ShakeDetector(private val onShake: () -> Unit) : SensorEventListener {
     private var ultimo = 0L
     override fun onSensorChanged(e: SensorEvent) {
@@ -1488,92 +1449,75 @@ class ShakeDetector(private val onShake: () -> Unit) : SensorEventListener {
     }
     override fun onAccuracyChanged(s: Sensor?, a: Int) {}
 }
+```
 
-// En HomeActivity:
+### 16.2 Agrégalo a `HomeActivity.kt` (dentro de la misma clase del Paso 12.3)
+
+```kotlin
+import android.content.Context.SENSOR_SERVICE
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import emilio.tolosa.finai.ui.NuevoMovimientoDialog
+
+// dentro de la clase HomeActivity, agrega:
 private lateinit var sm: SensorManager
 private val shake = ShakeDetector {
     NuevoMovimientoDialog(origen = "sensor").show(supportFragmentManager, "shake")
 }
+
 override fun onResume() {
     super.onResume()
     sm = getSystemService(SENSOR_SERVICE) as SensorManager
     sm.registerListener(shake, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI)
 }
-override fun onPause() { super.onPause(); sm.unregisterListener(shake) }  // importante: ahorra batería
+override fun onPause() { super.onPause(); sm.unregisterListener(shake) }
 ```
 
-En el emulador, los sensores se simulan en **Extended Controls (…) → Virtual sensors**.
-
-`SensorsActivity` puede quedarse como pantalla demo que muestre valores en vivo del acelerómetro/luz para la rúbrica.
+En el emulador, simula el sensor desde los **Extended Controls (⋮) → Virtual sensors → Accelerometer**.
 
 ---
 
-## 14. Estilos y diseño
-
-Colores tomados de tus mockups (ajústalos a gusto), en `res/values/colors.xml`:
+## Paso 17 — Colores (`res/values/colors.xml`)
 
 ```xml
-<color name="primary">#4F5BFF</color>       <!-- botones e íconos activos -->
-<color name="bg">#F5F3EE</color>            <!-- fondo crema del login -->
-<color name="card">#FFFFFF</color>
-<color name="income">#22A06B</color>
-<color name="expense">#E5484D</color>
-<color name="warning">#F5A623</color>
-<color name="text_secondary">#6B7280</color>
+<resources>
+    <color name="primary">#4F5BFF</color>
+    <color name="bg">#F5F3EE</color>
+    <color name="card">#FFFFFF</color>
+    <color name="income">#22A06B</color>
+    <color name="expense">#E5484D</color>
+    <color name="warning">#F5A623</color>
+    <color name="text_secondary">#6B7280</color>
+</resources>
 ```
 
-- Tarjetas: `bg_card.xml` con `<corners android:radius="20dp"/>` y fondo blanco (ya lo tienes).
-- Tarjeta azul del balance: un `<gradient>` de `#3B6BFF` a `#5B8DFF` con radio de 24dp.
-- Barras: `com.google.android.material.progressindicator.LinearProgressIndicator` con `app:trackCornerRadius="8dp"`.
+---
+
+## ✅ Orden para probar que todo funcione
+
+1. Compila (Sync + Build) sin tocar ninguna Activity todavía → debe compilar sin errores.
+2. Corre la app → debe ir a Login (o Home si ya había sesión).
+3. Regístrate → debe entrar a Home y ver la barra inferior con 5 pestañas.
+4. En Inicio, deben aparecer los 3 movimientos de ejemplo (`sembrarDatosDemo`).
+5. Ve a Movimientos → "+ Nuevo movimiento" → agrega uno → revisa que aparezca en la lista y en Inicio.
+6. Ve a Presupuesto → "Editar presupuesto" → agrega una categoría con límite → revisa la barra de progreso.
+7. Ve a Metas → "+ Nueva meta" → agrega una → "Abonar" → revisa que suba el porcentaje.
+8. Ve a Perfil → cambia moneda → cierra sesión → debe regresar a Login.
+9. Toca el botón flotante (✨) → abre el Asistente de IA → escribe algo → debe responder (aquí es donde se prueba tu llave de OpenAI).
+10. Prueba Cámara y Sensores al final, son extras.
 
 ---
 
-## 15. Orden de trabajo recomendado
+## 🛠️ Errores comunes
 
-| Etapa | Qué hacer | Resultado que verás |
+| Error | Causa | Solución |
 |---|---|---|
-| 1 | Dependencias, Manifest, `local.properties` | Proyecto compila |
-| 2 | Room + DataStore + ViewModel | Datos guardados |
-| 3 | Login / Registro / MainActivity router | Puedes entrar y salir |
-| 4 | `HomeActivity` + barra inferior + fragments vacíos | Navegas entre pestañas |
-| 5 | Inicio + Movimientos + diálogo | Agregas y ves movimientos |
-| 6 | Presupuesto + Metas + Perfil | App completa localmente |
-| 7 | ExchangeRate | Balance en USD |
-| 8 | OpenAI (chat) | Asistente funcionando |
-| 9 | Belvo sandbox | Importas transacciones |
-| 10 | Cámara + sensor | Extras |
-| 11 | Pulir diseño y probar | Listo para entregar |
-
-**Regla de oro:** que cada etapa funcione antes de pasar a la siguiente. Prueba las APIs solas, con un botón temporal, antes de integrarlas.
-
----
-
-## 16. Errores comunes y soluciones
-
-| Problema | Causa probable | Solución |
-|---|---|---|
-| `Unresolved reference: ActivityHomeBinding` | ViewBinding no activo | `viewBinding = true` + Sync Gradle |
-| `BuildConfig.OPENAI_KEY` no existe | Falta `buildConfig = true` | Agrégalo y sincroniza |
-| Room: "Cannot find implementation" | Falta plugin KSP | Revisa plugin y versión de KSP |
-| App se cierra al abrir | Activity sin declarar en el Manifest | Añade el `<activity>` |
-| Error 401 en OpenAI | Key mal copiada / sin saldo | Revisa `local.properties` y saldo |
-| Error 429 en OpenAI | Límite de peticiones o sin crédito | Espera o recarga crédito |
-| `UnknownHostException` | Sin internet o falta permiso `INTERNET` | Revisa Manifest y conexión del emulador |
-| Lista vacía | Olvidaste `submitList` o el `LayoutManager` | Asigna `layoutManager` en el RecyclerView |
-| Crash al volver a un Fragment | Uso de `_b` tras `onDestroyView` | Usa `_b = null` y `viewLifecycleOwner` |
-| Cambié las tablas y falla | Base vieja instalada | Desinstala la app o sube la `version` |
-
----
-
-## 17. Puntos para tu exposición
-
-1. **Arquitectura**: UI → ViewModel → Room/APIs.
-2. **Sin backend**: base local (Room), sesión local (DataStore), APIs directas.
-3. **Seguridad honesta**: llaves en `local.properties`; en producción irían en un servidor. Belvo solo en sandbox.
-4. **Cada API con su función**: ExchangeRate (conversión), OpenAI (asistente + lectura de tickets), Belvo (importación bancaria).
-5. **Extras técnicos**: cámara con permiso en runtime, acelerómetro, corrutinas y Flow (datos reactivos).
-6. **Mejoras futuras**: backend propio, biometría, gráficas por mes, exportar a PDF/CSV.
-
----
+| `Unresolved reference: FragmentHomeBinding` | ViewBinding apagado | Revisa `viewBinding = true` en Paso 1 y sincroniza |
+| `BuildConfig.OPENAI_KEY` no existe | Falta `buildConfig = true` | Revisa Paso 1 |
+| Se cierra la app al entrar a una pestaña | El ID del código no existe en tu XML | Revisa que los nombres de ID coincidan exactamente (mayúsculas incluidas) |
+| Room: no compila / "Cannot find implementation" | Falta plugin KSP o versión no coincide | Revisa Paso 1 y la versión de Kotlin de tu proyecto |
+| 401 en OpenAI | Llave mal copiada o sin saldo | Revisa `local.properties` |
+| Pantalla en blanco en un Fragment | El `.kt` no apunta a su layout (`R.layout.fragment_x`) | Revisa el constructor `Fragment(R.layout....)` |
 
 ¡Éxito con Finai! 🚀
+
