@@ -1,7 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center"
+    android:background="@color/bg" android:padding="24dp">
 
+    <TextView
+        android:text="Toma una foto de tu ticket"
+        android:textStyle="bold" android:textSize="18sp"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:text="La IA leerá el comercio, el monto y la categoría automáticamente."
+        android:textColor="@color/text_secondary"
+        android:gravity="center"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"/>
+
+    <Button
+        android:id="@+id/btnFoto"
+        android:text="📷 Tomar foto"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>

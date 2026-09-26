@@ -1,7 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/bg">
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvChat"
+        android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp"/>
+
+    <ProgressBar
+        android:id="@+id/progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:indeterminate="true"
+        android:layout_width="match_parent" android:layout_height="4dp"
+        android:visibility="gone"/>
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:padding="8dp"
+        android:background="@color/card">
+
+        <EditText android:id="@+id/etMensaje"
+            android:hint="Escribe tu pregunta..."
+            android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content"/>
+
+        <Button android:id="@+id/btnEnviar"
+            android:text="Enviar"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    </LinearLayout>
 </LinearLayout>
