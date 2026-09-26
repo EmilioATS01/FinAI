@@ -1,4 +1,4 @@
-package emilio.tolosa.finai
+package emilio.tolosa.finai.activities
 
 import android.Manifest
 import android.graphics.Bitmap

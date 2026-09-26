@@ -8,7 +8,7 @@ import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import emilio.tolosa.finai.LoginActivity
+import emilio.tolosa.finai.activities.LoginActivity
 import emilio.tolosa.finai.R
 import emilio.tolosa.finai.databinding.FragmentPerfilBinding
 import emilio.tolosa.finai.viewmodel.FinanzasViewModel

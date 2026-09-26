@@ -16,7 +16,7 @@
         android:theme="@style/Theme.FinAI">
 
         <activity
-            android:name="emilio.tolosa.finai.MainActivity"
+            android:name="emilio.tolosa.finai.activities.MainActivity"
             android:exported="true">
 
             <intent-filter>
@@ -27,20 +27,20 @@
         </activity>
 
         <activity
-            android:name="emilio.tolosa.finai.HomeActivity"
+            android:name="emilio.tolosa.finai.activities.HomeActivity"
             android:exported="false" />
 
         <activity
-            android:name="emilio.tolosa.finai.LoginActivity"
+            android:name="emilio.tolosa.finai.activities.LoginActivity"
             android:exported="false" />
 
         <activity
-            android:name="emilio.tolosa.finai.RegisterActivity"
+            android:name="emilio.tolosa.finai.activities.RegisterActivity"
             android:exported="false" />
 
-        <activity android:name="emilio.tolosa.finai.AIAssistantActivity" android:exported="false" />
-        <activity android:name="emilio.tolosa.finai.CameraActivity" android:exported="false" />
-        <activity android:name="emilio.tolosa.finai.SensorsActivity" android:exported="false" />
+        <activity android:name="emilio.tolosa.finai.activities.AIAssistantActivity" android:exported="false" />
+        <activity android:name="emilio.tolosa.finai.activities.CameraActivity" android:exported="false" />
+        <activity android:name="emilio.tolosa.finai.activities.SensorsActivity" android:exported="false" />
 
     </application>
 
