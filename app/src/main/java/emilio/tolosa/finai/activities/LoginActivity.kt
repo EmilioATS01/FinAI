@@ -4,16 +4,21 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricPrompt
 import androidx.lifecycle.lifecycleScope
 import emilio.tolosa.finai.R
+import emilio.tolosa.finai.biometrics.BiometricAuthListener
+import emilio.tolosa.finai.biometrics.BiometricUtil
 import emilio.tolosa.finai.data.DataStoreManager
 import emilio.tolosa.finai.databinding.ActivityLoginBinding
 import emilio.tolosa.finai.sha256
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class LoginActivity : AppCompatActivity() {
+class LoginActivity : AppCompatActivity(), BiometricAuthListener {
 
     private lateinit var binding: ActivityLoginBinding
+    private lateinit var store: DataStoreManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,7 +28,7 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // DataStore se encargará de revisar los datos guardados del usuario
-        val store = DataStoreManager(this)
+        store = DataStoreManager(this)
 
         // Botón "Iniciar sesión"
         binding.btnLogin.setOnClickListener {
@@ -71,6 +76,36 @@ class LoginActivity : AppCompatActivity() {
             }
         }
 
+        // Botón "Entrar con huella"
+        binding.btnBiometrico.setOnClickListener {
+            lifecycleScope.launch {
+                val emailGuardado = store.email.first()
+
+                if (emailGuardado.isEmpty()) {
+                    // Todavía no hay ninguna cuenta registrada en este dispositivo
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "Primero regístrate una vez con tu correo y contraseña",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else if (!BiometricUtil.isBiometricReady(this@LoginActivity)) {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "No hay huella configurada en este dispositivo",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    BiometricUtil.showBiometricPrompt(
+                        title = "Finai",
+                        subtitle = "Confirma tu identidad",
+                        description = "Usa tu huella para entrar",
+                        activity = this@LoginActivity,
+                        listener = this@LoginActivity
+                    )
+                }
+            }
+        }
+
         // Ir a la pantalla de registro
         binding.tvRegistro.setOnClickListener {
 
@@ -81,5 +116,19 @@ class LoginActivity : AppCompatActivity() {
 
             startActivity(intent)
         }
+    }
+
+    // --- Callbacks de BiometricAuthListener ---
+
+    override fun onBiometricAuthenticationSuccess(result: BiometricPrompt.AuthenticationResult) {
+        lifecycleScope.launch {
+            store.activarSesion()
+            startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
+            finish()
+        }
+    }
+
+    override fun onBiometricAuthenticationError(errorCode: Int, errorMessage: String) {
+        Toast.makeText(this, "Error: $errorMessage", Toast.LENGTH_SHORT).show()
     }
 }

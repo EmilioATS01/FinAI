@@ -42,6 +42,8 @@ class DataStoreManager(private val context: Context) {
         return ok
     }
 
+    suspend fun activarSesion() = context.dataStore.edit { it[Keys.SESION] = true }
+
     suspend fun cerrarSesion() = context.dataStore.edit { it[Keys.SESION] = false }
     suspend fun guardarMoneda(m: String) = context.dataStore.edit { it[Keys.MONEDA] = m }
     suspend fun guardarPresupuesto(v: Double) = context.dataStore.edit { it[Keys.PRESUPUESTO] = v }
