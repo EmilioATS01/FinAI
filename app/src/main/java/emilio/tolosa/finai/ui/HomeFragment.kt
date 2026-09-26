@@ -27,7 +27,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         b.rvUltimos.layoutManager = LinearLayoutManager(requireContext())
         b.rvUltimos.adapter = adapter
 
-        vm.sembrarDatosDemo()
+        //vm.sembrarDatosDemo()
         vm.cargarTasas("MXN")
 
         viewLifecycleOwner.lifecycleScope.launch {
