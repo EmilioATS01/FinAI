@@ -31,6 +31,9 @@ interface MovimientoDao {
 
     @Delete
     suspend fun borrar(m: Movimiento)
+    
+    @Update
+    suspend fun actualizar(m: Movimiento)
 
     // Metas
     @Query("SELECT * FROM metas")

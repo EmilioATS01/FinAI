@@ -20,12 +20,16 @@ class MovimientosFragment : Fragment(R.layout.fragment_movimientos) {
     override fun onViewCreated(view: View, s: Bundle?) {
         val b = FragmentMovimientosBinding.bind(view)
 
-        val adapter = MovimientoAdapter { m ->
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("¿Borrar ${m.titulo}?")
-                .setPositiveButton("Borrar") { _, _ -> vm.borrarMovimiento(m) }
-                .setNegativeButton("Cancelar", null).show()
-        }
+        val adapter = MovimientoAdapter(
+            onClick = { m -> NuevoMovimientoDialog(movimientoAEditar = m).show(childFragmentManager, "editar") },
+            onLongClick = { m ->
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("¿Borrar ${m.titulo}?")
+                    .setPositiveButton("Borrar") { _, _ -> vm.borrarMovimiento(m) }
+                    .setNegativeButton("Cancelar", null).show()
+            }
+        )
+
         b.rvMovimientos.layoutManager = LinearLayoutManager(requireContext())
         b.rvMovimientos.adapter = adapter
 
@@ -33,7 +37,11 @@ class MovimientosFragment : Fragment(R.layout.fragment_movimientos) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.movimientos.collect { adapter.submitList(it) }
+                vm.movimientos.collect {
+                    adapter.submitList(it)
+                    b.tvVacioMovimientos.visibility = if (it.isEmpty()) View.VISIBLE else View.GONE
+                    b.rvMovimientos.visibility = if (it.isEmpty()) View.GONE else View.VISIBLE
+                }
             }
         }
     }

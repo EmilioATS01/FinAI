@@ -43,6 +43,10 @@ class HomeActivity : AppCompatActivity() {
         b.fabIa.setOnClickListener {
             startActivity(Intent(this, AIAssistantActivity::class.java))
         }
+
+        b.fabCamara.setOnClickListener {
+            startActivity(Intent(this, CameraActivity::class.java))
+        }
     }
 
     override fun onResume() {

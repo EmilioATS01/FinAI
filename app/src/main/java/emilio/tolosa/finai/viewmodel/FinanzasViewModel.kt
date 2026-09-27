@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import emilio.tolosa.finai.BuildConfig
 import emilio.tolosa.finai.data.*
-import emilio.tolosa.finai.network.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -35,11 +34,12 @@ class FinanzasViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.estado(emptyList())
 
-    private val _tasas = MutableStateFlow<Map<String, Double>>(emptyMap())
-    val tasas: StateFlow<Map<String, Double>> = _tasas
+    
 
     fun agregarMovimiento(m: Movimiento) = viewModelScope.launch { dao.insertar(m) }
     fun borrarMovimiento(m: Movimiento) = viewModelScope.launch { dao.borrar(m) }
+
+    fun actualizarMovimiento(m: Movimiento) = viewModelScope.launch { dao.actualizar(m) }
     fun agregarMeta(nombre: String, objetivo: Double) =
         viewModelScope.launch { dao.insertarMeta(Meta(nombre = nombre, objetivo = objetivo)) }
     fun abonarMeta(meta: Meta, monto: Double) =
@@ -47,12 +47,7 @@ class FinanzasViewModel(app: Application) : AndroidViewModel(app) {
     fun guardarPresupuesto(cat: String, limite: Double) =
         viewModelScope.launch { dao.guardarPresupuesto(Presupuesto(cat, limite)) }
 
-    fun cargarTasas(base: String) = viewModelScope.launch {
-        try {
-            val r = ApiClient.exchange.latest(BuildConfig.EXCHANGE_KEY, base)
-            if (r.result == "success") _tasas.value = r.conversion_rates
-        } catch (_: Exception) { }
-    }
+
 
     fun resumenParaIa(): String {
         val movs = movimientos.value.take(15).joinToString("\n") {
@@ -70,30 +65,88 @@ class FinanzasViewModel(app: Application) : AndroidViewModel(app) {
         """.trimIndent()
     }
 
-    fun importarDeBelvo(onResultado: (String) -> Unit) = viewModelScope.launch {
-        try {
-            val link = ApiClient.belvo.crearLink(
-                LinkRequest(institution = "INSTITUCION_SANDBOX", username = "USUARIO_PRUEBA", password = "PASS_PRUEBA")
-            )
-            val txs = ApiClient.belvo.transacciones(
-                TxRequest(link.id, date_from = "2026-08-01", date_to = "2026-09-23")
-            )
-            txs.forEach { t ->
-                dao.insertar(
-                    Movimiento(
-                        titulo = t.description ?: "Movimiento bancario",
-                        categoria = t.category ?: "Otros",
-                        monto = kotlin.math.abs(t.amount),
-                        esIngreso = t.type == "INFLOW",
-                        origen = "belvo",
-                        externalId = t.id
-                    )
-                )
-            }
-            onResultado("Se importaron ${txs.size} movimientos")
-        } catch (e: Exception) {
-            onResultado("Error con Belvo: ${e.message}")
+    fun importarDeBelvo(context: android.content.Context, onResultado: (String) -> Unit) {
+        val requestManager = emilio.tolosa.finai.networking.RequestManager(context)
+        val cred = android.util.Base64.encodeToString(
+            "${BuildConfig.BELVO_ID}:${BuildConfig.BELVO_SECRET}".toByteArray(), android.util.Base64.NO_WRAP
+        )
+        val headers = mapOf("Authorization" to "Basic $cred", "Content-Type" to "application/json")
+
+        val bodyLink = org.json.JSONObject().apply {
+            put("institution", "tatooine_mx_fiscal")
+            put("username", "PMO010101000")
+            put("password", "business")
+            put("access_mode", "single")
+            put("fetch_resources", org.json.JSONArray(listOf("INVOICES")))
         }
+        val targetLink = emilio.tolosa.finai.networking.models.AnahuacAPI(
+            "https://sandbox.belvo.com/api/links/",
+            emilio.tolosa.finai.networking.models.HTTPMethod.POST,
+            emilio.tolosa.finai.networking.models.Encoding.JSON,
+            bodyLink, headers
+        )
+
+        requestManager.request(targetLink, object : emilio.tolosa.finai.networking.RequestListener {
+            override fun onResponse(response: String) {
+                val linkId = org.json.JSONObject(response).getString("id")
+
+                // Esperamos unos segundos: Belvo procesa las facturas en segundo plano
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    val urlInvoices = "https://sandbox.belvo.com/api/invoices/?link=$linkId"
+                    val targetInvoices = emilio.tolosa.finai.networking.models.AnahuacAPI(
+                        urlInvoices,
+                        emilio.tolosa.finai.networking.models.HTTPMethod.GET,
+                        emilio.tolosa.finai.networking.models.Encoding.URL,
+                        null, headers
+                    )
+
+                    requestManager.request(targetInvoices, object : emilio.tolosa.finai.networking.RequestListener {
+                        override fun onResponse(response: String) {
+                            android.util.Log.i("Belvo", "RAW INVOICES: $response")
+                            viewModelScope.launch {
+                                try {
+                                    val json = org.json.JSONObject(response)
+                                    val results = json.optJSONArray("results") ?: org.json.JSONArray()
+
+                                    if (results.length() == 0) {
+                                        onResultado("Aún no hay facturas listas, intenta de nuevo en unos segundos")
+                                        return@launch
+                                    }
+
+                                    val ingresos = mutableListOf<org.json.JSONObject>()
+                                    val gastos = mutableListOf<org.json.JSONObject>()
+
+                                    for (i in 0 until results.length()) {
+                                        val inv = results.getJSONObject(i)
+                                        val esIngreso = inv.optString("type") == "INFLOW" || inv.optString("invoice_type") == "Ingreso"
+                                        if (esIngreso && ingresos.size < 2) ingresos.add(inv)
+                                        else if (!esIngreso && gastos.size < 3) gastos.add(inv)
+                                    }
+
+                                    (ingresos + gastos).forEach { inv ->
+                                        dao.insertar(
+                                            Movimiento(
+                                                titulo = inv.optString("sender_name").takeIf { it.isNotBlank() && it != "null" } ?: "Factura SAT",
+                                                categoria = inv.optString("invoice_type", "Otros"),
+                                                monto = inv.optDouble("total_amount", 0.0).coerceAtMost(2000.0),
+                                                esIngreso = inv.optString("type") == "INFLOW" || inv.optString("invoice_type") == "Ingreso",
+                                                origen = "belvo",
+                                                externalId = inv.optString("id")
+                                            )
+                                        )
+                                    }
+                                    onResultado("Se importaron ${results.length()} facturas")
+                                } catch (e: Exception) {
+                                    onResultado("Error leyendo facturas: ${e.message}")
+                                }
+                            }
+                        }
+                        override fun onError(error: String) = onResultado("Error trayendo facturas: $error")
+                    })
+                }, 8000) // espera 4 segundos antes de pedir las facturas
+            }
+            override fun onError(error: String) = onResultado("Error creando link: $error")
+        })
     }
 
     fun sembrarDatosDemo() = viewModelScope.launch {

@@ -12,6 +12,15 @@
         android:layout_width="match_parent" android:layout_height="0dp"
         android:layout_weight="1" android:layout_marginTop="12dp"/>
 
+    <TextView
+        android:id="@+id/tvVacioMovimientos"
+        android:text="Aún no tienes movimientos.\nToca '+ Nuevo movimiento' para empezar."
+        android:textColor="@color/text_secondary"
+        android:gravity="center"
+        android:visibility="gone"
+        android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1"/>
+
     <Button
         android:id="@+id/btnNuevo"
         android:text="+ Nuevo movimiento"

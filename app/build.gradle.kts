@@ -73,7 +73,12 @@ dependencies {
     // Implementacion de biometricos
     implementation("androidx.biometric:biometric:1.1.0")
 
+    //Volley
+    implementation("com.android.volley:volley:1.2.1")
+    implementation("com.google.code.gson:gson:2.13.2")
 
+    //SplashScreen
+    implementation("androidx.core:core-splashscreen:1.0.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

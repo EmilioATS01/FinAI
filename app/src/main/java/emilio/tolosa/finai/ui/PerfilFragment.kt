@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -40,6 +41,15 @@ class PerfilFragment : Fragment(R.layout.fragment_perfil) {
                 vm.store.cerrarSesion()
                 startActivity(Intent(requireContext(), LoginActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+
+        b.btnImportarBelvo.setOnClickListener {
+            Toast.makeText(requireContext(), "Importando...", Toast.LENGTH_SHORT).show()
+            vm.importarDeBelvo(requireContext()) { mensaje ->
+                requireActivity().runOnUiThread {
+                    Toast.makeText(requireContext(), mensaje, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }

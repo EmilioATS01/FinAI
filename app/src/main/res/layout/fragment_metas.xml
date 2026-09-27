@@ -11,6 +11,15 @@
         android:layout_width="match_parent" android:layout_height="0dp"
         android:layout_weight="1" android:layout_marginTop="12dp"/>
 
+    <TextView
+        android:id="@+id/tvVacioMetas"
+        android:text="Aún no tienes metas.\nToca '+ Nueva meta' para crear una."
+        android:textColor="@color/text_secondary"
+        android:gravity="center"
+        android:visibility="gone"
+        android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1"/>
+    
     <Button
         android:id="@+id/btnNuevaMeta"
         android:text="+ Nueva meta"

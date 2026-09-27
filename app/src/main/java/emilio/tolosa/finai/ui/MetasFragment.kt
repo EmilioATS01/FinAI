@@ -59,7 +59,11 @@ class MetasFragment : Fragment(R.layout.fragment_metas) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.metas.collect { adapter.submitList(it) }
+                vm.metas.collect {
+                    adapter.submitList(it)
+                    b.tvVacioMetas.visibility = if (it.isEmpty()) View.VISIBLE else View.GONE
+                    b.rvMetas.visibility = if (it.isEmpty()) View.GONE else View.VISIBLE
+                }
             }
         }
     }

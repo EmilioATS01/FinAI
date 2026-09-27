@@ -11,6 +11,7 @@ import emilio.tolosa.finai.databinding.ItemMovimientoBinding
 import emilio.tolosa.finai.mx
 
 class MovimientoAdapter(
+    private val onClick: ((Movimiento) -> Unit)? = null,
     private val onLongClick: ((Movimiento) -> Unit)? = null
 ) : ListAdapter<Movimiento, MovimientoAdapter.VH>(Diff) {
 
@@ -33,6 +34,7 @@ class MovimientoAdapter(
         h.b.tvMonto.setTextColor(
             if (m.esIngreso) Color.parseColor("#F5A623") else Color.parseColor("#E5484D")
         )
+        h.b.root.setOnClickListener { onClick?.invoke(m) }
         h.b.root.setOnLongClickListener { onLongClick?.invoke(m); true }
     }
 }

@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import emilio.tolosa.finai.R
 import emilio.tolosa.finai.databinding.FragmentHomeBinding
 import emilio.tolosa.finai.mx
+import emilio.tolosa.finai.viewmodel.ExchangeViewModel
 import emilio.tolosa.finai.viewmodel.FinanzasViewModel
 import kotlinx.coroutines.launch
 
@@ -28,7 +29,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         b.rvUltimos.adapter = adapter
 
         //vm.sembrarDatosDemo()
-        vm.cargarTasas("MXN")
+        val exchangeVm = ExchangeViewModel(requireContext())
+        exchangeVm.fetchTasas(emilio.tolosa.finai.BuildConfig.EXCHANGE_KEY, "MXN")
+        exchangeVm.tasas.observe(viewLifecycleOwner) { tasas ->
+            val usd = tasas["USD"] ?: return@observe
+            b.tvBalanceUsd.text = "≈ USD ${"%.2f".format(vm.balance.value * usd)}"
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -36,12 +42,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 launch { vm.ingresos.collect { b.tvIngresos.text = it.mx() } }
                 launch { vm.gastos.collect { b.tvGastos.text = it.mx() } }
                 launch { vm.ultimos.collect { adapter.submitList(it) } }
-                launch {
-                    vm.tasas.collect { tasas ->
-                        val usd = tasas["USD"] ?: return@collect
-                        b.tvBalanceUsd.text = "≈ USD ${"%.2f".format(vm.balance.value * usd)}"
-                    }
-                }
             }
         }
     }
