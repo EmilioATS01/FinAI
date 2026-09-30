@@ -44,4 +44,20 @@
     <string name="finai_brand">FINAI</string>
     <string name="btn_biometric">🔒 Entrar con huella</string>
     <string name="or_continue">o</string>
+
+    <!-- Cámara / Escáner de tickets -->
+    <string name="volver">Volver</string>
+    <string name="escanear_ticket">Escanear ticket</string>
+    <string name="icono_camara">📷</string>
+    <string name="escanea_tu_ticket">Escanea tu ticket</string>
+    <string name="toma_foto_ticket">Toma una foto de tu ticket</string>
+    <string name="ia_descripcion_ticket">La IA leerá el comercio, el monto y la categoría automáticamente.</string>
+    <string name="btn_tomar_foto">📷 Tomar foto</string>
+    <!-- Asistente FinAI -->
+    <string name="asistente_finai">Asistente FinAI</string>
+    <string name="asistente_financiero">Asistente financiero</string>
+    <string name="icono_destellos">✨</string>
+    <string name="asistente_descripcion">Pregúntame sobre tus gastos, ahorros, metas o presupuesto.</string>
+    <string name="hint_pregunta">Escribe tu pregunta&#8230;</string>
+    <string name="btn_enviar">Enviar</string>
 </resources>
