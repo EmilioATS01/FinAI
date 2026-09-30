@@ -1,28 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="@color/bg" android:padding="16dp">
+    android:orientation="vertical" android:background="@color/bg"
+    android:paddingStart="16dp" android:paddingTop="16dp"
+    android:paddingEnd="16dp" android:paddingBottom="8dp">
 
-    <TextView android:text="Mis movimientos" android:textStyle="bold" android:textSize="18sp"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    <!-- ENCABEZADO -->
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:orientation="horizontal"
+        android:layout_marginTop="8dp">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvMovimientos"
+        <View
+            android:layout_width="6dp" android:layout_height="20dp"
+            android:background="@drawable/bg_month_filter"/>
+
+        <TextView
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:layout_marginStart="8dp"
+            android:text="Mis movimientos"
+            android:textColor="@color/text_primary"
+            android:textSize="22sp" android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:background="@drawable/bg_month_filter"
+            android:gravity="center"
+            android:paddingStart="16dp" android:paddingTop="7dp"
+            android:paddingEnd="16dp" android:paddingBottom="7dp"
+            android:text="Este mes"
+            android:textColor="@color/white"
+            android:textSize="12sp" android:textStyle="bold"/>
+
+    </LinearLayout>
+
+    <!-- CONTENIDO DESPLAZABLE -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:layout_marginTop="12dp"/>
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:layout_marginTop="14dp">
 
-    <TextView
-        android:id="@+id/tvVacioMovimientos"
-        android:text="Aún no tienes movimientos.\nToca '+ Nuevo movimiento' para empezar."
-        android:textColor="@color/text_secondary"
-        android:gravity="center"
-        android:visibility="gone"
-        android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1"/>
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical">
 
+            <!-- MENSAJE VACÍO -->
+            <TextView
+                android:id="@+id/tvVacioMovimientos"
+                android:layout_width="match_parent" android:layout_height="300dp"
+                android:gravity="center"
+                android:text="Aún no tienes movimientos.\nToca '+ Nuevo movimiento' para empezar."
+                android:textColor="@color/text_secondary"
+                android:visibility="gone"/>
+
+            <!-- INGRESOS -->
+            <TextView
+                android:id="@+id/tvTituloIngresos"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="INGRESOS"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" android:textStyle="bold"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvIngresos"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
+
+            <!-- EGRESOS -->
+            <TextView
+                android:id="@+id/tvTituloEgresos"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="8dp"
+                android:text="EGRESOS"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" android:textStyle="bold"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvEgresos"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- NUEVO MOVIMIENTO -->
     <Button
         android:id="@+id/btnNuevo"
+        android:layout_width="match_parent" android:layout_height="52dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_button"
+        android:backgroundTint="@null"
         android:text="+ Nuevo movimiento"
-        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"/>
+
 </LinearLayout>

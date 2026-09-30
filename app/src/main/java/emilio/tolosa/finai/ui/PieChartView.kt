@@ -7,54 +7,149 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.content.ContextCompat
+import emilio.tolosa.finai.R
 
-class PieChartView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
+class PieChartView(
+    context: Context,
+    attrs: AttributeSet? = null
+) : View(context, attrs) {
 
     private var datos: List<Pair<String, Double>> = emptyList()
-    private val colores = listOf(
-        "#4F5BFF", "#22A06B", "#F5A623", "#E5484D", "#9B59B6", "#1ABC9C", "#E67E22"
-    ).map { Color.parseColor(it) }
+
+    // Colores oficiales de FinAI
+    private val colores: List<Int>
+        get() = listOf(
+            ContextCompat.getColor(context, R.color.primary),
+            ContextCompat.getColor(context, R.color.income),
+            ContextCompat.getColor(context, R.color.warning),
+            ContextCompat.getColor(context, R.color.expense)
+        )
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     fun setDatos(nuevos: List<Pair<String, Double>>) {
         datos = nuevos.filter { it.second > 0 }
         invalidate()
+        requestLayout()
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
         if (datos.isEmpty()) return
 
         val total = datos.sumOf { it.second }
+
         if (total <= 0) return
 
-        val diametro = minOf(width, height * 2 / 3).toFloat()
-        val rect = RectF(16f, 16f, diametro, diametro)
+        // Tamaño del círculo
+        val diametro = width * 0.55f
+
+        // Centrar horizontalmente
+        val izquierda = (width - diametro) / 2f
+        val arriba = 16f
+
+        val rect = RectF(
+            izquierda,
+            arriba,
+            izquierda + diametro,
+            arriba + diametro
+        )
 
         var anguloInicio = -90f
+
         datos.forEachIndexed { i, (_, valor) ->
-            val barrido = (valor / total * 360).toFloat()
-            paint.color = colores[i % colores.size]
-            canvas.drawArc(rect, anguloInicio, barrido, true, paint)
+
+            val barrido =
+                (valor / total * 360).toFloat()
+
+            paint.color =
+                colores[i % colores.size]
+
+            canvas.drawArc(
+                rect,
+                anguloInicio,
+                barrido,
+                true,
+                paint
+            )
+
             anguloInicio += barrido
         }
 
-        // Leyenda debajo del círculo
+        // LEYENDA
         paint.textSize = 28f
-        var y = diametro + 50f
+
+        val leyenda = datos.map { (nombre, valor) ->
+            "$nombre: $${"%.0f".format(valor)}"
+        }
+
+        // Calcular cuánto ocupa la leyenda más larga
+        val anchoMaximoTexto =
+            leyenda.maxOfOrNull {
+                paint.measureText(it)
+            } ?: 0f
+
+        val anchoLeyenda =
+            44f + anchoMaximoTexto
+
+        val inicioLeyenda =
+            (width - anchoLeyenda) / 2f
+
+        var y =
+            arriba + diametro + 45f
+
         datos.forEachIndexed { i, (nombre, valor) ->
-            paint.color = colores[i % colores.size]
-            canvas.drawRect(16f, y - 24f, 46f, y + 4f, paint)
-            paint.color = Color.DKGRAY
-            canvas.drawText("$nombre: $${"%.0f".format(valor)}", 60f, y, paint)
+
+            // Cuadro de color
+            paint.color =
+                colores[i % colores.size]
+
+            canvas.drawRect(
+                inicioLeyenda,
+                y - 22f,
+                inicioLeyenda + 28f,
+                y + 4f,
+                paint
+            )
+
+            // Texto
+            paint.color =
+                Color.DKGRAY
+
+            canvas.drawText(
+                "$nombre: $${"%.0f".format(valor)}",
+                inicioLeyenda + 42f,
+                y,
+                paint
+            )
+
             y += 40f
         }
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val ancho = MeasureSpec.getSize(widthMeasureSpec)
-        val alturaDeseada = (ancho * 0.6f + datos.size * 40 + 80).toInt()
-        setMeasuredDimension(ancho, alturaDeseada)
+    override fun onMeasure(
+        widthMeasureSpec: Int,
+        heightMeasureSpec: Int
+    ) {
+
+        val ancho =
+            MeasureSpec.getSize(widthMeasureSpec)
+
+        val diametro =
+            ancho * 0.55f
+
+        val alturaDeseada =
+            (
+                    diametro +
+                            datos.size * 40 +
+                            90
+                    ).toInt()
+
+        setMeasuredDimension(
+            ancho,
+            alturaDeseada
+        )
     }
 }

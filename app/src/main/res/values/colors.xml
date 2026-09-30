@@ -1,18 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
+
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="primary">#4F5BFF</color>
-    <color name="bg">#F5F3EE</color>
+
+    <!-- Colores principales FinAI -->
+    <color name="primary">#5968F2</color>
+    <color name="primary_dark">#4556E8</color>
+    <color name="primary_light">#EEF0FF</color>
+
+    <!-- Fondo -->
+    <color name="bg">#FBFAFF</color>
+
+    <!-- Tarjetas -->
     <color name="card">#FFFFFF</color>
-    <color name="income">#22A06B</color>
-    <color name="expense">#E5484D</color>
+    <color name="card_soft">#F5F4FF</color>
+
+    <!-- Finanzas -->
+    <color name="income">#2ABF9E</color>
+    <color name="expense">#E15B64</color>
     <color name="warning">#F5A623</color>
-    <color name="text_secondary">#6B7280</color>
+
+    <!-- Textos -->
+    <color name="text_primary">#252735</color>
+    <color name="text_secondary">#7D8095</color>
+
+    <!-- Detalles -->
+    <color name="border">#E6E5EF</color>
+    <color name="nav_unselected">#9A9CAE</color>
 
 </resources>

@@ -20,27 +20,43 @@ class MovimientosFragment : Fragment(R.layout.fragment_movimientos) {
     override fun onViewCreated(view: View, s: Bundle?) {
         val b = FragmentMovimientosBinding.bind(view)
 
-        val adapter = MovimientoAdapter(
-            onClick = { m -> NuevoMovimientoDialog(movimientoAEditar = m).show(childFragmentManager, "editar") },
-            onLongClick = { m ->
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("¿Borrar ${m.titulo}?")
-                    .setPositiveButton("Borrar") { _, _ -> vm.borrarMovimiento(m) }
-                    .setNegativeButton("Cancelar", null).show()
-            }
-        )
+        val onItemClick: (emilio.tolosa.finai.data.Movimiento) -> Unit = { m ->
+            NuevoMovimientoDialog(movimientoAEditar = m).show(childFragmentManager, "editar")
+        }
+        val onItemLongClick: (emilio.tolosa.finai.data.Movimiento) -> Unit = { m ->
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("¿Borrar ${m.titulo}?")
+                .setPositiveButton("Borrar") { _, _ -> vm.borrarMovimiento(m) }
+                .setNegativeButton("Cancelar", null).show()
+        }
 
-        b.rvMovimientos.layoutManager = LinearLayoutManager(requireContext())
-        b.rvMovimientos.adapter = adapter
+        val adapterIngresos = MovimientoAdapter(onClick = onItemClick, onLongClick = onItemLongClick)
+        val adapterEgresos = MovimientoAdapter(onClick = onItemClick, onLongClick = onItemLongClick)
+
+        b.rvIngresos.layoutManager = LinearLayoutManager(requireContext())
+        b.rvIngresos.adapter = adapterIngresos
+
+        b.rvEgresos.layoutManager = LinearLayoutManager(requireContext())
+        b.rvEgresos.adapter = adapterEgresos
 
         b.btnNuevo.setOnClickListener { NuevoMovimientoDialog().show(childFragmentManager, "nuevo") }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.movimientos.collect {
-                    adapter.submitList(it)
-                    b.tvVacioMovimientos.visibility = if (it.isEmpty()) View.VISIBLE else View.GONE
-                    b.rvMovimientos.visibility = if (it.isEmpty()) View.GONE else View.VISIBLE
+                vm.movimientos.collect { lista ->
+                    val ingresos = lista.filter { it.esIngreso }
+                    val egresos = lista.filter { !it.esIngreso }
+
+                    adapterIngresos.submitList(ingresos)
+                    adapterEgresos.submitList(egresos)
+
+                    b.tvTituloIngresos.visibility = if (ingresos.isEmpty()) View.GONE else View.VISIBLE
+                    b.rvIngresos.visibility = if (ingresos.isEmpty()) View.GONE else View.VISIBLE
+
+                    b.tvTituloEgresos.visibility = if (egresos.isEmpty()) View.GONE else View.VISIBLE
+                    b.rvEgresos.visibility = if (egresos.isEmpty()) View.GONE else View.VISIBLE
+
+                    b.tvVacioMovimientos.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
                 }
             }
         }

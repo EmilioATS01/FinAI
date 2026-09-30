@@ -2,49 +2,201 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/bg">
+
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:padding="16dp">
 
+        <!-- BALANCE -->
         <LinearLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical" android:padding="20dp"
-            android:background="@color/primary">
-            <TextView android:text="Balance disponible" android:textColor="#FFFFFF"
+            android:background="@drawable/bg_balance" android:elevation="4dp">
+
+            <TextView
+                android:text="Balance disponible" android:textColor="#FFFFFF"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/tvBalance" android:textSize="28sp" android:textStyle="bold"
-                android:textColor="#FFFFFF"
+
+            <TextView
+                android:id="@+id/tvBalance" android:textSize="28sp"
+                android:textStyle="bold" android:textColor="#FFFFFF"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/tvBalanceUsd" android:textColor="#E0E0FF"
+
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="18dp" android:orientation="horizontal">
+
+                <!-- Actualización -->
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Actualización" android:textColor="#DADFFF"
+                        android:textSize="11sp"/>
+
+                    <TextView
+                        android:id="@+id/tvActualizacion" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:layout_marginTop="2dp"
+                        android:text="Hoy" android:textColor="@color/white"
+                        android:textSize="12sp" android:textStyle="bold"/>
+
+                </LinearLayout>
+
+                <!-- Mes actual -->
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:gravity="end"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Mes actual" android:textColor="#DADFFF"
+                        android:textSize="11sp"/>
+
+                    <TextView
+                        android:id="@+id/tvMesActual" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:layout_marginTop="2dp"
+                        android:text="Septiembre 2026" android:textColor="@color/white"
+                        android:textSize="12sp" android:textStyle="bold"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tvBalanceUsd" android:textColor="#E0E0FF"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
         </LinearLayout>
 
+        <!-- INGRESOS Y GASTOS -->
         <LinearLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal" android:layout_marginTop="12dp">
-            <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:background="@color/card"
-                android:orientation="vertical" android:padding="16dp" android:layout_marginEnd="8dp">
-                <TextView android:text="Ingresos" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/tvIngresos" android:textStyle="bold" android:textColor="@color/income"
+            android:orientation="horizontal" android:layout_marginTop="14dp">
+
+            <!-- INGRESOS -->
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="96dp" android:layout_marginEnd="7dp"
+                android:background="@drawable/bg_card" android:elevation="2dp"
+                android:gravity="center_vertical" android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:text="Ingresos"
+                    android:textColor="@color/text_secondary" android:textSize="14sp"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:id="@+id/tvIngresos"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textStyle="bold" android:textSize="18sp"
+                    android:textColor="@color/income"/>
+
             </LinearLayout>
-            <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:background="@color/card"
-                android:orientation="vertical" android:padding="16dp">
-                <TextView android:text="Gastos" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                <TextView android:id="@+id/tvGastos" android:textStyle="bold" android:textColor="@color/expense"
+
+            <!-- GASTOS -->
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="96dp" android:layout_marginStart="7dp"
+                android:background="@drawable/bg_card" android:elevation="2dp"
+                android:gravity="center_vertical" android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:text="Gastos"
+                    android:textColor="@color/text_secondary" android:textSize="14sp"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:id="@+id/tvGastos"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textStyle="bold" android:textSize="18sp"
+                    android:textColor="@color/expense"/>
+
             </LinearLayout>
+
         </LinearLayout>
 
-        <TextView android:text="Últimos movimientos" android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <!-- AHORRO DEL MES -->
+        <LinearLayout
+            android:id="@+id/cardAhorro"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card" android:elevation="2dp"
+            android:orientation="vertical" android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:gravity="center_vertical" android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Ahorro del mes"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tvPorcentajeAhorro"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="0%"
+                    android:textColor="@color/primary"
+                    android:textSize="14sp" android:textStyle="bold"/>
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvAhorroMes"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="$0.00"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp" android:textStyle="bold"/>
+
+            <ProgressBar
+                android:id="@+id/progressAhorro"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent" android:layout_height="8dp"
+                android:layout_marginTop="10dp"
+                android:max="100" android:progress="0"
+                android:progressTint="@color/primary"
+                android:progressBackgroundTint="@color/primary_light"/>
+
+        </LinearLayout>
+
+        <!-- ÚLTIMOS MOVIMIENTOS -->
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center_vertical" android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Últimos movimientos"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp" android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tvVerTodos"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Ver todos ›"
+                android:textColor="@color/primary"
+                android:textSize="14sp" android:textStyle="bold"/>
+
+        </LinearLayout>
+
+        <!-- LISTA DE MOVIMIENTOS -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvUltimos"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:nestedScrollingEnabled="false"
             android:layout_marginTop="8dp"/>
+
     </LinearLayout>
+
 </ScrollView>

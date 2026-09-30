@@ -40,4 +40,8 @@
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
 
+    <!-- Diseño Login -->
+    <string name="finai_brand">FINAI</string>
+    <string name="btn_biometric">🔒 Entrar con huella</string>
+    <string name="or_continue">o</string>
 </resources>

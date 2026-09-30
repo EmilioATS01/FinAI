@@ -34,6 +34,12 @@ android {
         buildConfig = true
     }
 
+    sourceSets {
+        getByName("main") {
+            java.directories.add("build/generated/data_binding_base_class_source_out/debug/out")
+        }
+    }
+
     buildTypes {
         release {
             optimization {

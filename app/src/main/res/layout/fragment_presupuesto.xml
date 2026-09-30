@@ -1,58 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/bg">
+
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="16dp">
+        android:orientation="vertical"
+        android:paddingStart="16dp" android:paddingTop="16dp"
+        android:paddingEnd="16dp" android:paddingBottom="130dp">
 
-        <TextView android:text="Mi presupuesto" android:textStyle="bold" android:textSize="18sp"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <!-- ENCABEZADO -->
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
+            <View
+                android:layout_width="6dp" android:layout_height="20dp"
+                android:background="@color/primary"/>
+
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Mi presupuesto"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold"/>
+
+        </LinearLayout>
+
+        <!-- PRESUPUESTO MENSUAL -->
         <LinearLayout
             android:id="@+id/cardPresupuestoMensual"
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:background="@color/card"
-            android:padding="16dp" android:layout_marginTop="12dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_budget_main"
             android:clickable="true"
-            android:foreground="?attr/selectableItemBackground">
-            <TextView android:text="Presupuesto mensual (toca para editar)"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <!-- TÍTULO Y DETALLE VISUAL -->
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Presupuesto mensual"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="☆"
+                    android:textColor="@color/primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"/>
+
+            </LinearLayout>
+
+            <!-- MONTO -->
+            <TextView
+                android:id="@+id/tvPresupuestoMensual"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/text_primary"
+                android:textSize="30sp"
+                android:textStyle="bold"/>
+
+            <!-- INDICACIÓN -->
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Toca la tarjeta para editar"
                 android:textColor="@color/text_secondary"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/tvPresupuestoMensual" android:textStyle="bold" android:textSize="22sp"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                android:textSize="12sp"/>
+
         </LinearLayout>
 
+        <!-- GASTOS POR CATEGORÍA -->
         <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
             android:text="Gastos por categoría"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold"/>
 
+        <!-- GRÁFICA EXISTENTE -->
         <emilio.tolosa.finai.ui.PieChartView
-            android:id="@+id/pieChart"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:id="@+id/pieChart" android:layout_width="280dp"
+            android:layout_height="wrap_content" android:layout_gravity="center_horizontal"
             android:layout_marginTop="8dp"/>
 
+        <!-- LISTA POR CATEGORÍAS -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvPresupuestos"
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false"
-            android:layout_marginTop="12dp"/>
+            android:layout_marginTop="12dp"
+            android:nestedScrollingEnabled="false"/>
 
+        <!-- DISPONIBLE TOTAL -->
         <LinearLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal" android:background="@color/card"
-            android:padding="16dp" android:layout_marginTop="8dp">
-            <TextView android:text="Disponible total:" android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content" android:layout_gravity="center_vertical"/>
-            <TextView android:id="@+id/tvDisponible" android:textStyle="bold" android:textColor="@color/income"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:elevation="2dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Disponible total:"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tvDisponible"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="@color/income"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+
         </LinearLayout>
 
+        <!-- EDITAR PRESUPUESTO -->
         <Button
             android:id="@+id/btnEditar"
+            android:layout_width="match_parent" android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_button"
+            android:backgroundTint="@null"
             android:text="Editar presupuesto"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"/>
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"/>
+
     </LinearLayout>
+
 </ScrollView>
